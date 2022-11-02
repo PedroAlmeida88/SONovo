@@ -5,7 +5,7 @@
 int main(int argc, char **argv){
     char str[128];
 
-    if(argc != 2) {
+    if(argc != 3) {
         printf("[ERRO] Numero invalido de argumentos");
         return -1;
     }

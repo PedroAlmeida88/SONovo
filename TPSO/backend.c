@@ -1,8 +1,24 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <fcntl.h>
 #include <unistd.h>
 
+int numArgumentos(char str[]){
+    int tam = 0;
+    char aux[128];
+    strcpy(aux, str);
+    char *token = strtok(aux, " ");
+    
+    while(token != NULL){
+        tam++;
+        token = strtok(NULL, " ");
+    }
+    return tam;
+}
+
 int main() {
+    int numArgumento;
     char str[128];
 
     printf("Bem vindo Administrador\n");
@@ -10,29 +26,61 @@ int main() {
     while (1){
         printf("Comando:");
         fflush(stdout);
-        scanf("%s", str);
+        fgets(str, 128, stdin);
+        str[strcspn(str, "\n")] = 0;
 
-        if(strcmp(str, "users") == 0){
-            printf("Valido\n");
+        printf("String: %s\n", str);
+
+        numArgumento = numArgumentos(str);
+        printf("Num de Argumetos: %d\n", numArgumento);
+        char *token = strtok(str, " ");
+
+        if(strcmp(token, "users") == 0){
+            if(numArgumento != 1)
+                printf("Nao Valido\n");
+            else
+                printf("Valido\n");
         } 
-        else if(strcmp(str, "list") == 0){
-            printf("Valido\n");
+        else if(strcmp(token, "list") == 0){
+            if(numArgumento != 1)
+                printf("Nao Valido\n");
+            else
+                printf("Valido\n");
         } 
-        else if(strcmp(str, "kick") == 0){
-            printf("Valido\n");
+        else if(strcmp(token, "kick") == 0){
+            if(numArgumento != 2)
+                printf("Nao Valido\n");
+            else {
+                token = strtok(NULL, " ");
+                printf("User: %s\n", token);
+                printf("Valido\n");
+            }
         } 
-        else if(strcmp(str, "prom") == 0){
-            printf("Valido\n");
+        else if(strcmp(token, "prom") == 0){
+            if(numArgumento != 1)
+                printf("Nao Valido\n");
+            else
+                printf("Valido\n");
         } 
-        else if(strcmp(str, "reprom") == 0){
-            printf("Valido\n");
+        else if(strcmp(token, "reprom") == 0){
+            if(numArgumento != 1)
+                printf("Nao Valido\n");
+            else
+                printf("Valido\n");
         } 
-        else if(strcmp(str, "cancel") == 0){
-            printf("Valido\n");
+        else if(strcmp(token, "cancel") == 0){
+            if(numArgumento != 2)
+                printf("Nao Valido\n");
+            else
+                printf("Valido\n");
         } 
-        else if(strcmp(str, "close") == 0){
-            printf("Valido\n");
-            break;
+        else if(strcmp(token, "close") == 0){
+            if(numArgumento != 1)
+                printf("Nao Valido\n");
+            else {
+                printf("Valido\n");
+                break;
+            }
         } 
         else {
             printf("Comando nao Valido\n");

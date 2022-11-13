@@ -1,4 +1,5 @@
 #include <stdio.h>
 #include <string.h>
 
-char **separaString(char *str);
+void leFichItens(char *filename);
+int numArgumentos(char str[]);

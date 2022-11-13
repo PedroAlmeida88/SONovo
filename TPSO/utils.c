@@ -1,8 +1,5 @@
 //#include "utils.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -26,12 +23,34 @@ void leFichItens(char *filename) {
         while (fscanf(f,"%d %s %s %d %d %d %s %s",&id,nome,categoria,&vAtual,&vCompreJa,&duracao,usernameVendedor,usernameLicitador) != EOF){
             printf("%d %s %s %d %d %d %s %s\n",id,nome,categoria,vAtual,vCompreJa,duracao,usernameVendedor,usernameLicitador);
             //TODO:Tratar informacao
-
         }
     }
-
 }
+
+int numArgumentos(char str[]){
+    int tam = 0;
+    char aux[128];
+    strcpy(aux, str);
+    char *token = strtok(aux, " ");
+    
+    while(token != NULL){
+        tam++;
+        token = strtok(NULL, " ");
+    }
+    return tam;
+}
+
 int main(){
-    leFichItens("itens.txt");
+    //leFichItens("itens.txt");
+
+    char str[128];
+    scanf("%s", &str);
+
+    printf("num de argumentos: %d\n", numArgumentos(str));
+    printf("String: %s\n", str);
+    char *token = strtok(str, " ");
+    printf("Token: %s\n", token);
+    token = strtok(NULL, " ");
+    printf("Resto: %s\n", token);
     return 0;
 }

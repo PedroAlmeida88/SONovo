@@ -35,19 +35,19 @@ int main() {
         printf("Num de Argumetos: %d\n", numArgumento);
         char *token = strtok(str, " ");
 
-        if(strcmp(token, "users") == 0){
+        if(strcmp(token, "users") == 0)}        ///FEITO
+            if(numArgumento != 1)
+                printf("Nao Valido\n");
+            else
+                printf("Valido\n");
+        }
+        else if(strcmp(token, "list") == 0){    ///FEITO
             if(numArgumento != 1)
                 printf("Nao Valido\n");
             else
                 printf("Valido\n");
         } 
-        else if(strcmp(token, "list") == 0){
-            if(numArgumento != 1)
-                printf("Nao Valido\n");
-            else
-                printf("Valido\n");
-        } 
-        else if(strcmp(token, "kick") == 0){
+        else if(strcmp(token, "kick") == 0){    ///TODO:COMPARAR COM TODOS OS CLIENTES LOGADOS
             if(numArgumento != 2)
                 printf("Nao Valido\n");
             else {
@@ -56,24 +56,27 @@ int main() {
                 printf("Valido\n");
             }
         } 
-        else if(strcmp(token, "prom") == 0){
+        else if(strcmp(token, "prom") == 0){    ///Feito
             if(numArgumento != 1)
                 printf("Nao Valido\n");
             else
                 printf("Valido\n");
         } 
-        else if(strcmp(token, "reprom") == 0){
+        else if(strcmp(token, "reprom") == 0){  ///Feito
             if(numArgumento != 1)
                 printf("Nao Valido\n");
             else
                 printf("Valido\n");
         } 
-        else if(strcmp(token, "cancel") == 0){
+        else if(strcmp(token, "cancel") == 0){ ///
             if(numArgumento != 2)
                 printf("Nao Valido\n");
-            else
+            else{
+                token = strtok(NULL, " ");
+                printf("Nome do executavel: %s\n", token);
                 printf("Valido\n");
-        } 
+            }
+        }
         else if(strcmp(token, "close") == 0){
             if(numArgumento != 1)
                 printf("Nao Valido\n");

@@ -1,29 +1,5 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <unistd.h>
-
-//typedef struct promocao Promocao;
-typedef struct promocao {
-    char categoria[50];
-    int desconto;
-    int duracao;
-}Promocao;
-
-
-int numArgumentos(char str[]) {
-    int tam = 0;
-    char aux[128];
-    strcpy(aux, str);
-    char *token = strtok(aux, " ");
-
-    while (token != NULL) {
-        tam++;
-        token = strtok(NULL, " ");
-    }
-    return tam;
-} //TODO:Por nos utils.
+#include "utils.h"
+#include "backend.h"
 
 Promocao lancaPromotor(char *nomePromotor) {
     Promocao prom;

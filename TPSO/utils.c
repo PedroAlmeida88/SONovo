@@ -1,9 +1,4 @@
-//#include "utils.h"
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <unistd.h>
+#include "utils.h"
 
 //Cada linha do ficheiro descreve um item à venda, e os campos em cada linha são separados por um espaço.
 //Cada linha deve conter, por esta ordem:

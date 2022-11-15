@@ -2,21 +2,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
-int numArgumentos(char str[]){
-    int tam = 0;
-    char aux[128];
-    strcpy(aux, str);
-    char *token = strtok(aux, " ");
-    
-    while(token != NULL){
-        tam++;
-        token = strtok(NULL, " ");
-    }
-    return tam;
-}
-
-
-//TODO: Ver quantos argumentos cada um dos comandos tem 
+#include "utils.h"
+ 
 int main(int argc, char **argv){
     char str[128];
     int numArgumento;

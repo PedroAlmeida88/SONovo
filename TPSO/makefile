@@ -1,13 +1,12 @@
 CC=gcc
 FLAGS=-c
 
-all: programa.o imprime.o
-	gcc programa.o imprime.o -o ex3
+all: frontend backend
 
-backend.o: backend.c backend.h
+backend.o: backend.c backend.h utils.h
 	gcc backend.c -c
 
-frontend.o: frontend.c frontend.h
+frontend.o: frontend.c utils.h
 	gcc frontend.c -c
 
 limpa:

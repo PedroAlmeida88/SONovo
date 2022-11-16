@@ -42,7 +42,7 @@ int main(int argc, char **argv){
             if(numArgumento != 1)
                 printf("Nao Valido\n");
             else
-                printf("Valido\n");
+                leFichItens("itens.txt");
         }
         else if(strcmp(token, "licat") == 0){       //TODO:Ver se a categoria existe
             if(numArgumento != 2)

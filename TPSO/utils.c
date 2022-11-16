@@ -7,16 +7,16 @@
 //vende, username do utilizador que licitou o valor mais elevado (ou “-” se não tiver ainda sido licitado).
 
 void leFichItens(char *filename) {
-    int id, vAtual, vCompreJa, duracao, res, fd;
-    char nome[50],categoria[50],usernameVendedor[50],usernameLicitador[50];
+    int res, fd;
+    Item item;
     FILE *f;
     f = fopen(filename,"rt");
     if(f == NULL){
         printf("Erro ao abrir o ficheiro");
         return;
     }else{
-        while (fscanf(f,"%d %s %s %d %d %d %s %s",&id,nome,categoria,&vAtual,&vCompreJa,&duracao,usernameVendedor,usernameLicitador) != EOF){
-            printf("%d %s %s %d %d %d %s %s\n",id,nome,categoria,vAtual,vCompreJa,duracao,usernameVendedor,usernameLicitador);
+        while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
+            printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
             //TODO:Tratar informacao
         }
     }

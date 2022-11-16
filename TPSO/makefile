@@ -6,10 +6,10 @@ all: frontend backend
 frontend: frontend.o utils.o
 	gcc frontend.o utils.o -o frontend
 
-backend: backend.o utils.o
-	gcc backend.o utils.o -o backend
+backend: backend.o utils.o users_lib.o
+	gcc backend.o utils.o users_lib.o -o backend
 
-backend.o: backend.c backend.h utils.h
+backend.o: backend.c backend.h utils.h users_lib.h
 	gcc -c backend.c -o backend.o
 
 frontend.o: frontend.c utils.h
@@ -20,4 +20,4 @@ utils.o: utils.c utils.h
 
 limpa:
 	echo "A limpar..."
-	rm *.o
+	rm backend.o frontend.o utils.o

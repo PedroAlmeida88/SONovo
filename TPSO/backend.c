@@ -1,5 +1,6 @@
 #include "utils.h"
 #include "backend.h"
+#include "users_lib.h"
 
 Promocao lancaPromotor(char *nomePromotor) {
     Promocao prom;
@@ -40,23 +41,37 @@ Promocao lancaPromotor(char *nomePromotor) {
     return prom;
 }
 
+void executaPromotores(char* filename){
+    FILE *f;Promocao prom;
+    char nomePromotor[50];
+    f= fopen(filename,"rt");
+    if(f == NULL) {
+        printf("Erro ao abrir o ficheiro");
+        return;
+    }else{
+        while (fscanf(f,"%s",nomePromotor) != EOF){
+              = lancaPromotor(nomePromotor);
+            printf("Promotor: %s\n",nomePromotor);
+            printf("Categoria: %s\n",prom.categoria);
+            printf("Desconto: %d\n",prom.desconto);
+            printf("Duracao: %d\n\n",prom.duracao);
+        }
+    }
+}
+
 int main() {
     Promocao prom;
     int numArgumento;
     char str[128];
-
-    prom = lancaPromotor("black_friday");
-    printf("Categoria: %s\n",prom.categoria);
-    printf("Desconto: %d\n",prom.desconto);
-    printf("Duracao: %d\n",prom.duracao);
-
     printf("Bem vindo Administrador\n");
+
+    executaPromotores("promotores.txt");
 
     while (1) {
         printf("Comando:");
         fflush(stdout);
         fgets(str, 128, stdin);
-        str[strcspn(str, "\n")] = 0;
+        str[strcspn(str, " \n")] = 0;
 
         printf("String: %s\n", str);
 

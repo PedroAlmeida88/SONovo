@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
-
+#include <signal.h>
 typedef struct promocao
 {
     char categoria[50];

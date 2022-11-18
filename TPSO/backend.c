@@ -18,12 +18,12 @@ Promocao lancaPromotor(char *nomePromotor) {
         dup(canal[1]);
         close(canal[0]);
         close(canal[1]);
-
         if(execl(nomePromotor,nomePromotor,NULL) == -1){
             fprintf(stderr,"ERRO");
         }
         exit(2);
     }else{//Processo pai
+        printf("RES: %d",res);
         bytes = read(canal[0],frase, sizeof (frase));
         if(bytes == -1){
             fprintf(stderr,"Erro na leitura");
@@ -37,6 +37,10 @@ Promocao lancaPromotor(char *nomePromotor) {
     }
     close(canal[1]);
     close(canal[0]);
+
+
+    union sigval a;
+    sigqueue(res,SIGUSR1,a);
 
     return prom;
 }

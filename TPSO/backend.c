@@ -23,13 +23,11 @@ Promocao lancaPromotor(char *nomePromotor) {
         }
         exit(2);
     }else{//Processo pai
-        printf("RES: %d",res);
         bytes = read(canal[0],frase, sizeof (frase));
         if(bytes == -1){
             fprintf(stderr,"Erro na leitura");
             exit(1);
         }
-        //printf("Li: %s\n",frase);
         sscanf(frase,"%s %d %d",categoria,&desconto,&duracao);
         strcpy(prom.categoria,categoria);
         prom.desconto = desconto;
@@ -40,7 +38,9 @@ Promocao lancaPromotor(char *nomePromotor) {
 
 
     union sigval a;
-    sigqueue(res,SIGUSR1,a);
+    if(sigqueue(res,SIGUSR1,a) == -1)
+        fprintf(stderr,"Erro ao enviar o sinal");
+    wait(&res);
 
     return prom;
 }

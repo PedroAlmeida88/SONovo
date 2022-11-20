@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include "utils.h"
  
-int main(int argc, char **argv){
+int main(int argc, char **argv, char **envp){
     char str[128];
     int numArgumento;
     char buffer[50],nomeItem[50],categoria[50],aux[128];
@@ -42,7 +42,7 @@ int main(int argc, char **argv){
             if(numArgumento != 1)
                 printf("Nao Valido\n");
             else
-                leFichItens("itens.txt");
+                leFichItens(getenv("FITEMS"));
         }
         else if(strcmp(token, "licat") == 0){       //TODO:Ver se a categoria existe
             if(numArgumento != 2)

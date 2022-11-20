@@ -12,7 +12,7 @@ void leFichItens(char *filename) {
     FILE *f;
     f = fopen(filename,"rt");
     if(f == NULL){
-        printf("Erro ao abrir o ficheiro");
+        fprintf(stderr,"Ficheiro nao encontrado\n");
         return;
     }else{
         while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){

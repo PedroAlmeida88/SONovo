@@ -63,7 +63,7 @@ void executaPromotores(char* filename){
     }
 }
 
-int main() {
+int main(int argc,char *argv[],char *envp[]) {
     Promocao prom;
     int numArgumento;
     char str[128];
@@ -125,16 +125,16 @@ int main() {
             if (numArgumento != 1)
                 printf("Nao Valido\n");
             else {
-                executaPromotores("promotores.txt");
+                executaPromotores(getenv("FPROMOTERS"));
             }
         } else if(strcmp(token,"utilizadores") == 0){
             if (numArgumento != 1)
                 printf("Nao Valido\n");
             else {
-                loadUsersFile("utilizadores.txt");
+                loadUsersFile(getenv("FUSERS"));
                 printf("Saldo do utilizador TESTE: %d\n", getUserBalance("TESTE"));
                 updateUserBalance("TESTE", getUserBalance("TESTE") - 1);
-                saveUsersFile("utilizadores.txt");
+                saveUsersFile(getenv("FUSERS"));
             }
         } else {
             printf("Comando nao Valido\n");

@@ -2,21 +2,18 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+
 #include "utils.h"
- 
-int main(int argc, char **argv, char **envp){
-    char str[128];
-    int numArgumento;
-    char buffer[50],nomeItem[50],categoria[50],aux[128];
-    int precoBase,precoCompreJa,duracao,id,valor;
+char CLIENT_FIFO_FINAL[100];
 
-    if(argc != 3) {
-        printf("[ERRO] Numero invalido de argumentos");
-        return -1;
-    }
-    //verificaDadosUtilizador(argv);
 
+void pedeComandos(){
     while(1){
+        int numArgumento;
+        char buffer[50],nomeItem[50],categoria[50],aux[128];
+        int precoBase,precoCompreJa,duracao,id,valor;
+        char str[128];
+
         printf("Comando:");
         fflush(stdout);
         fgets(str, 128, stdin);
@@ -118,6 +115,74 @@ int main(int argc, char **argv, char **envp){
             printf("Comando nao Valido\n");
         }
     }
+}
+
+int main(int argc, char **argv, char **envp){
+    if(argc != 3) {
+        printf("[ERRO] Numero invalido de argumentos");
+        exit(1);
+    }
+    int fd;
+    User a;
+    strcpy(a.nome,argv[1]);
+    strcpy(a.password,argv[2]);
+    a.pid = getpid();
+
+    ///Garantir que o servidor está ativo
+    if(access(FIFO_SERVIDOR, F_OK) != 0){
+        printf("O servidor nao esta ativo!!!(Pipe nao exite)");
+        exit(1);
+    }
+
+    sprintf(CLIENT_FIFO_FINAL, FIFO_CLIENTE, getpid());
+    if(mkfifo(CLIENT_FIFO_FINAL,0666) == -1){
+        if(errno == EEXIST){
+            printf("Fifo já está a correr");
+        }
+        printf("Erro abrir fifo");
+        exit(1);
+    }
+
+    ///Envia o nome,password e PID do cliente do frontend para o backend
+    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
+    if(fdEnvia == -1){
+        printf("Erro ao abrir o fifo");
+    }
+    int size = write(fdEnvia, &a, sizeof(User));
+    close(fdEnvia);
+    ///Receber a resposta do servidor
+    int fdResposta = open(CLIENT_FIFO_FINAL, O_RDONLY);
+    if(fdResposta == -1){
+        printf("Erro ao abrir o fifo");
+    }
+    Resposta resposta;
+    int size2 = read(fdResposta, &resposta, sizeof(Resposta));
+    if(size2 == -1){
+        fprintf(stderr,"Erro na leitura");
+        exit(1);
+    }
+
+    if(resposta.num == 1){
+        printf("Bem vindo %s!\n",argv[1]);
+    }else{
+        printf("Utilizador desconecido ou password errada!\n");
+        exit(1);
+    }
+    close(fdResposta);
+    unlink(CLIENT_FIFO_FINAL);
+
+    pedeComandos();
+
+
     printf("A avisar o servidor que irei sair\n");
+    union sigval info;
+    struct sigaction sa;
+    info.sival_int = getpid();  //enviar o PID ao backend
+    sigqueue(resposta.pid,SIGUSR1,info);
+
+
     printf("Adeus\n");
+
+
+    exit(0);
 }

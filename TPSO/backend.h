@@ -5,8 +5,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/wait.h>
-typedef struct promocao
-{
+typedef struct promocao{
     char categoria[50];
     int desconto;
     int duracao;       

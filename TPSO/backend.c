@@ -106,6 +106,7 @@ void pedeComando(char *str){
             printf("Nao Valido\n");
         else {
             printf("Valido\n");
+            unlink(FIFO_SERVIDOR);
             exit(0);
         }
     } else if(strcmp(token,"promotores") == 0){
@@ -170,8 +171,15 @@ Promocao lancaPromotor(char *nomePromotor) {
 
     return prom;
 }
+
 void handle_sig(int sig,siginfo_t *info,void *old){
     printf("Eliminar da lista o cliente com o PID [%d]\n",info->si_value.sival_int);
+}
+
+void funcSinalSair(){
+    printf("\nA encerrar o servidor...\n");
+    unlink(FIFO_SERVIDOR);
+    exit(1);
 }
 
 int main(int argc,char *argv[],char *envp[]) {
@@ -180,10 +188,17 @@ int main(int argc,char *argv[],char *envp[]) {
     fd_set fds;
     struct timeval tv;
 
+    //sinal(quando um cliente sai)
     struct sigaction sa;
     sa.sa_sigaction = handle_sig;
     sa.sa_flags = SA_SIGINFO;
     sigaction(SIGUSR1, &sa, NULL);
+
+    //sinal(quando o backend termina á força (ctrl + c))
+    struct sigaction sa2;
+    sa2.sa_sigaction = funcSinalSair;
+    sa2.sa_flags = SA_SIGINFO;
+    sigaction(SIGINT,&sa2,NULL);
 
     initLista();
 

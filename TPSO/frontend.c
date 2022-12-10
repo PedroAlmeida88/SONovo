@@ -5,7 +5,7 @@
 
 #include "utils.h"
 char CLIENT_FIFO_FINAL[100];
-
+int servPid=-1;
 
 void pedeComandos(){
     while(1){
@@ -117,12 +117,23 @@ void pedeComandos(){
     }
 }
 
+void funcSinalSair(){
+    printf("\nA encerrar o cliente..\n");
+    unlink(CLIENT_FIFO_FINAL);
+    union sigval info;
+    struct sigaction sa;
+    info.sival_int = getpid();  //enviar o PID ao backend
+    sigqueue(servPid,SIGUSR1,info);
+    exit(1);
+}
+
 int main(int argc, char **argv, char **envp){
     if(argc != 3) {
         printf("[ERRO] Numero invalido de argumentos");
         exit(1);
     }
-    int fd;
+
+
     User a;
     strcpy(a.nome,argv[1]);
     strcpy(a.password,argv[2]);
@@ -171,8 +182,13 @@ int main(int argc, char **argv, char **envp){
     close(fdResposta);
     unlink(CLIENT_FIFO_FINAL);
 
+    //sinal(quando o cliente termina á força (ctrl + c))
+    struct sigaction sa2;
+    sa2.sa_sigaction = funcSinalSair;
+    sa2.sa_flags = SA_SIGINFO;
+    sigaction(SIGINT,&sa2,NULL);
+    servPid = resposta.pid;
     pedeComandos();
-
 
     printf("A avisar o servidor que irei sair\n");
     union sigval info;

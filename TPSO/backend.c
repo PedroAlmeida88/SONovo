@@ -56,13 +56,36 @@ void executaPromotores(char* filename){
     }
 }
 
-void pedeComando(char *str){
+//Funcao que vai informar todos os clientes que o sevidor foi enceraado
+void informaClienteFim(){
+    for(int i=0;i<20;i++){
+        if(ListaClientes[i].pid != -1){
+            //enviar para todos
+            union sigval info;
+            sigqueue(ListaClientes[i].pid,SIGUSR1,info);
+        }
+    }
+}
+
+void kickUser(char nome[]){
+    int flag = 0,index=-1;//ativa se existir o utilizador
+    for(int i=0;i<20;i++){
+        if(strcmp(ListaClientes[i].nome,nome) == 0){
+            flag = 1;//o utilizador esta logado
+            index = i;
+        }
+    }
+    if(flag==1){
+        union sigval info;
+        sigqueue(ListaClientes[index].pid,SIGUSR2,info);
+        printf("A expulsar o utilizador...\n");
+    }else{
+        printf("Utilizador desconhecido\n");
+    }
+}
+void pedeComando(char *str,int numArgumento ){
     Promocao prom;
-    int numArgumento;
-
-    str[strcspn(str, " \n")] = 0;
-
-    numArgumento = numArgumentos(str);
+    //printf("Num de Argumetos: %d\n", numArgumento);
     char *token = strtok(str, " ");
 
     if (strcmp(token, "users") == 0) {///FEITO
@@ -75,13 +98,12 @@ void pedeComando(char *str){
             printf("Nao Valido\n");
         else
             printf("Valido\n");
-    } else if (strcmp(token, "kick") == 0) {    ///TODO:COMPARAR COM TODOS OS CLIENTES LOGADOS
+    } else if (strcmp(token, "kick") == 0) {
         if (numArgumento != 2)
             printf("Nao Valido\n");
         else {
             token = strtok(NULL, " ");
-            printf("User: %s\n", token);
-            printf("Valido\n");
+            kickUser(token);
         }
     } else if (strcmp(token,"prom") == 0) {    ///Feito
         if (numArgumento != 1)
@@ -106,6 +128,7 @@ void pedeComando(char *str){
             printf("Nao Valido\n");
         else {
             printf("Valido\n");
+            informaClienteFim();
             unlink(FIFO_SERVIDOR);
             exit(0);
         }
@@ -172,14 +195,21 @@ Promocao lancaPromotor(char *nomePromotor) {
     return prom;
 }
 
-void handle_sig(int sig,siginfo_t *info,void *old){
-    printf("Eliminar da lista o cliente com o PID [%d]\n",info->si_value.sival_int);
-}
-
 void funcSinalSair(){
     printf("\nA encerrar o servidor...\n");
+    informaClienteFim();
     unlink(FIFO_SERVIDOR);
     exit(1);
+}
+
+void handle_sig(int sig,siginfo_t *info,void *old){
+    printf("Cliente com o PID [%d] ainda esta vivo\n",info->si_value.sival_int);
+    ///TODO:Verificar quando um cliente morreu
+}
+
+void handle_sig_sair(int sig,siginfo_t *info,void *old){
+    printf("O cliente com o PID [%d] saiu\n",info->si_value.sival_int);
+    ///TODO:Retirar o cliente da lista e reordenar a lista
 }
 
 int main(int argc,char *argv[],char *envp[]) {
@@ -188,17 +218,23 @@ int main(int argc,char *argv[],char *envp[]) {
     fd_set fds;
     struct timeval tv;
 
-    //sinal(quando um cliente sai)
+    //de n em n segundos
     struct sigaction sa;
     sa.sa_sigaction = handle_sig;
     sa.sa_flags = SA_SIGINFO;
     sigaction(SIGUSR1, &sa, NULL);
 
-    //sinal(quando o backend termina á força (ctrl + c))
+    //sinal(quando um cliente sai)
     struct sigaction sa2;
-    sa2.sa_sigaction = funcSinalSair;
+    sa2.sa_sigaction = handle_sig_sair;
     sa2.sa_flags = SA_SIGINFO;
-    sigaction(SIGINT,&sa2,NULL);
+    sigaction(SIGUSR2, &sa2, NULL);
+
+    //sinal(quando o backend termina á força (ctrl + c))
+    struct sigaction sa3;
+    sa3.sa_sigaction = funcSinalSair;
+    sa3.sa_flags = SA_SIGINFO;
+    sigaction(SIGINT,&sa3,NULL);
 
     initLista();
 
@@ -230,10 +266,12 @@ int main(int argc,char *argv[],char *envp[]) {
 
         }else if(res >0 && FD_ISSET(0,&fds)){
             char str[128];
-            //printf("Comando1:");
             fflush(stdout);
             fgets(str, 128, stdin);
-            pedeComando(str);
+            str[strcspn(str, "\n")] = 0;
+            int numArgumento = numArgumentos(str);
+
+            pedeComando(str,numArgumento);
         }else if (res >0 && FD_ISSET(fdRecebe,&fds)) {
             ///Le a informacao do cliente
             int size = read(fdRecebe, &a, sizeof(User));

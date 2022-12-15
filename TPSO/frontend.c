@@ -117,13 +117,31 @@ void pedeComandos(){
     }
 }
 
-void funcSinalSair(){
-    printf("\nA encerrar o cliente..\n");
-    unlink(CLIENT_FIFO_FINAL);
+void handle_alarm(){
+    //printf("\nEnviei um sinal ao servidor\n");
     union sigval info;
     struct sigaction sa;
     info.sival_int = getpid();  //enviar o PID ao backend
     sigqueue(servPid,SIGUSR1,info);
+    alarm(5);
+}
+
+void handle_sig_servidorEncerrou(){
+    printf("\nO servidor foi encerrado...\n");
+    printf("A terminar...\n");
+    unlink(CLIENT_FIFO_FINAL);
+    exit(1);
+}
+
+void handle_sig_servidorExpulsou(){
+    printf("\nVoce foi expulso pelo servidor...\n A sair...\n");
+    unlink(CLIENT_FIFO_FINAL);
+    exit(1);
+}
+
+void funcSinalSair(){
+    printf("\nA encerrar o cliente...\n");
+    unlink(CLIENT_FIFO_FINAL);
     exit(1);
 }
 
@@ -132,7 +150,6 @@ int main(int argc, char **argv, char **envp){
         printf("[ERRO] Numero invalido de argumentos");
         exit(1);
     }
-
 
     User a;
     strcpy(a.nome,argv[1]);
@@ -182,19 +199,41 @@ int main(int argc, char **argv, char **envp){
     close(fdResposta);
     unlink(CLIENT_FIFO_FINAL);
 
+    //caso o servidor seja encerrado
+    struct sigaction sa3;
+    sa3.sa_sigaction = handle_sig_servidorEncerrou;
+    sa3.sa_flags = SA_SIGINFO;
+    sigaction(SIGUSR1, &sa3, NULL);
+
+    //caso o cliente seja expulso pelo servidor
+    struct sigaction sa4;
+    sa4.sa_sigaction = handle_sig_servidorExpulsou;
+    sa4.sa_flags = SA_SIGINFO;
+    sigaction(SIGUSR2, &sa4, NULL);
+
     //sinal(quando o cliente termina á força (ctrl + c))
     struct sigaction sa2;
     sa2.sa_sigaction = funcSinalSair;
     sa2.sa_flags = SA_SIGINFO;
     sigaction(SIGINT,&sa2,NULL);
     servPid = resposta.pid;
+
+
+    struct sigaction saAlarm;
+    saAlarm.sa_handler = handle_alarm;
+    saAlarm.sa_flags = SA_RESTART | SA_SIGINFO;
+    sigaction(SIGALRM,&saAlarm,NULL);
+    //alarm(atoi(getenv("HEARTBEAT")));
+    alarm(5);
+
     pedeComandos();
+
 
     printf("A avisar o servidor que irei sair\n");
     union sigval info;
     struct sigaction sa;
     info.sival_int = getpid();  //enviar o PID ao backend
-    sigqueue(resposta.pid,SIGUSR1,info);
+    sigqueue(resposta.pid,SIGUSR2,info);
 
 
     printf("Adeus\n");

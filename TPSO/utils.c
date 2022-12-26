@@ -6,21 +6,7 @@
 //da licitação mais elevada), valor “compre já”, duração do leilão (= tempo restante), username do utilizador que
 //vende, username do utilizador que licitou o valor mais elevado (ou “-” se não tiver ainda sido licitado).
 
-void leFichItens(char *filename) {
-    int res, fd;
-    Item item;
-    FILE *f;
-    f = fopen(filename,"rt");
-    if(f == NULL){
-        fprintf(stderr,"Ficheiro nao encontrado\n");
-        return;
-    }else{
-        while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
-            printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
-            //TODO:Tratar informacao
-        }
-    }
-}
+
 
 //Retorna o numero de argumentos que o utilizador coloca nos comandos
 int numArgumentos(char str[]){

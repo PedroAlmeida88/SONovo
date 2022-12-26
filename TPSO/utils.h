@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <pthread.h>
 
 #define FIFO_SERVIDOR "SERVIDOR"
 #define FIFO_CLIENTE "CLIENTE%d" // usar scanf com o pid que vem do utilizador
@@ -39,7 +40,5 @@ typedef struct resposta
     pid_t pid;
 } Resposta;
 
-
-void leFichItens(char *filename);
 
 int numArgumentos(char str[]);

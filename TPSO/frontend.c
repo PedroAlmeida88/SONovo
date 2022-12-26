@@ -39,7 +39,7 @@ void pedeComandos(){
             if(numArgumento != 1)
                 printf("Nao Valido\n");
             else
-                leFichItens(getenv("FITEMS"));
+                printf("Valido\n");
         }
         else if(strcmp(token, "licat") == 0){       //TODO:Ver se a categoria existe
             if(numArgumento != 2)
@@ -223,7 +223,7 @@ int main(int argc, char **argv, char **envp){
     saAlarm.sa_handler = handle_alarm;
     saAlarm.sa_flags = SA_RESTART | SA_SIGINFO;
     sigaction(SIGALRM,&saAlarm,NULL);
-    //alarm(atoi(getenv("HEARTBEAT")));
+    //TODO:alarm(atoi(getenv("HEARTBEAT")));
     alarm(5);
 
     pedeComandos();

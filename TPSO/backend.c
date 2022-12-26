@@ -4,6 +4,30 @@
 char CLIENT_FIFO_FINAL[100];
 User ListaClientes[20];
 int nUsers=0;
+int tempo=0;
+
+typedef struct {
+    int continua;
+    pthread_mutex_t *ptrinco;
+}TDATA;
+
+void leFichItens(char *filename) {
+    int res, fd;
+    Item item;
+    FILE *f;
+    f = fopen(filename,"rt");
+    if(f == NULL){
+        fprintf(stderr,"Ficheiro nao encontrado\n");
+        return;
+    }else{
+        fscanf(f,"%d",&tempo);
+        while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
+            //printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
+            //TODO:Tratar informacao
+        }
+    }
+}
+
 void initLista(){
     User a;
     a.pid = -1;
@@ -127,10 +151,7 @@ void pedeComando(char *str,int numArgumento ){
         if (numArgumento != 1)
             printf("Nao Valido\n");
         else {
-            printf("Valido\n");
             informaClienteFim();
-            unlink(FIFO_SERVIDOR);
-            exit(0);
         }
     } else if(strcmp(token,"promotores") == 0){
         if (numArgumento != 1)
@@ -212,12 +233,26 @@ void handle_sig_sair(int sig,siginfo_t *info,void *old){
     ///TODO:Retirar o cliente da lista e reordenar a lista
 }
 
+void *temporizador(void *dados){
+    TDATA *pd = dados;
+    //TODO:Guardar o tempo e para ser inicializado depois
+    do{
+        sleep(1);//relogio do servidor(avancar um segundo)-decrementer um segundo ao leilao ativo;ter um int hora sempre a incrementar->fazer com o sleep
+        pthread_mutex_lock(pd->ptrinco);
+        tempo++;
+        printf("Tempo %ds\n", tempo);
+        pthread_mutex_unlock(pd->ptrinco);
+    }while(pd->continua);
+    pthread_exit(NULL);
+}
+
 int main(int argc,char *argv[],char *envp[]) {
-    printf("Bem vindo Administrador\n");
+    printf("Bem vindo Administrador\n");char str[128];
     User a;
     fd_set fds;
-    struct timeval tv;
-
+    pthread_mutex_t trinco;
+    pthread_t tid;
+    TDATA data;
     //de n em n segundos
     struct sigaction sa;
     sa.sa_sigaction = handle_sig;
@@ -237,6 +272,7 @@ int main(int argc,char *argv[],char *envp[]) {
     sigaction(SIGINT,&sa3,NULL);
 
     initLista();
+    leFichItens(getenv("FITEMS"));
 
     //TODO:ACCESS
     if(mkfifo(FIFO_SERVIDOR, 0666) == -1){
@@ -252,20 +288,21 @@ int main(int argc,char *argv[],char *envp[]) {
         exit(1);
     }
 
+    pthread_mutex_init(&trinco,NULL);
+    //T1
+    data.continua = 1;
+    data.ptrinco = &trinco;
+    pthread_create(&tid,NULL, temporizador,&data);
+
     do{
+        //T0
         printf("Comando:\n");
         fflush(stdout);
         FD_ZERO(&fds);
         FD_SET(0,&fds);//tomar atenção ao 0(scanf)
         FD_SET(fdRecebe,&fds);//tomar atenção ao fdReceber -> read
-        //tv.tv_sec = 5;
-        //tv.tv_usec = 0; // esperar no maximo 5 segundos
         int res = select(fdRecebe+1,&fds,NULL,NULL,/*&tv*/NULL);//colocar o ultimo + 1 |
-        if(res == 0){
-
-
-        }else if(res >0 && FD_ISSET(0,&fds)){
-            char str[128];
+         if(res >0 && FD_ISSET(0,&fds)){
             fflush(stdout);
             fgets(str, 128, stdin);
             str[strcspn(str, "\n")] = 0;
@@ -308,12 +345,14 @@ int main(int argc,char *argv[],char *envp[]) {
                 exit(1);
             }
         }
-    } while (1);
+    } while (strcmp(str,"close")!=0);
 
+    data.continua=0;
+    pthread_join(tid,NULL);
+
+    pthread_mutex_destroy(&trinco);
+    close(fdRecebe);
     unlink(FIFO_SERVIDOR);
-
-
-
     printf("A avisar os clientes que ira fechar\n");
     printf("Fechou\n");
     return 0;

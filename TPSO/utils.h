@@ -33,6 +33,11 @@ typedef struct Utilizador
     pid_t pid;
 } User;
 
+typedef struct {
+    Item item;
+    User user;
+    int comando;
+}Comando;
 
 typedef struct resposta
 {

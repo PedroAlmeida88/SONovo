@@ -5,11 +5,47 @@ char CLIENT_FIFO_FINAL[100];
 User ListaClientes[20];
 int nUsers=0;
 int tempo=0;
+int id=1;
 
 typedef struct {
     int continua;
     pthread_mutex_t *ptrinco;
 }TDATA;
+
+void list(char *filename){
+    Item item;
+    FILE *f;
+    f = fopen(filename,"rt");
+    if(f == NULL){
+        fprintf(stderr,"Ficheiro nao encontrado\n");
+        return;
+    }else{
+        fscanf(f,"%d",&tempo);
+        while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
+            printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
+            //TODO:Tratar informacao
+        }
+    }
+    fclose(f);
+}
+
+void getId(char *filename){
+    Item item;
+    FILE *f;
+    f = fopen(filename,"rt");
+    if(f == NULL){
+        fprintf(stderr,"Ficheiro nao encontrado\n");
+        return;
+    }else{
+        fscanf(f,"%d",&tempo);
+        while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
+            //printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
+            //TODO:Tratar informacao
+        }
+        id = ++item.id;
+    }
+    fclose(f);
+}
 
 void leFichItens(char *filename) {
     int res, fd;
@@ -26,6 +62,20 @@ void leFichItens(char *filename) {
             //TODO:Tratar informacao
         }
     }
+    fclose(f);
+}
+
+void addItemToFich(char *filename,Item item){
+    FILE *f;
+    f = fopen(filename,"a");
+    if(f == NULL){
+        fprintf(stderr,"Ficheiro nao encontrado\n");
+        return;
+    }else{
+        item.id = id++;
+        fprintf(f,"\n%d %s %s %d %d %d %s %s",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
+    }
+    fclose(f);
 }
 
 void initLista(){
@@ -107,6 +157,7 @@ void kickUser(char nome[]){
         printf("Utilizador desconhecido\n");
     }
 }
+
 void pedeComando(char *str,int numArgumento ){
     Promocao prom;
     //printf("Num de Argumetos: %d\n", numArgumento);
@@ -224,14 +275,31 @@ void funcSinalSair(){
 }
 
 void handle_sig(int sig,siginfo_t *info,void *old){
-    printf("Cliente com o PID [%d] ainda esta vivo\n",info->si_value.sival_int);
-    ///TODO:Verificar quando um cliente morreu
+    if(sig==SIGUSR1) {
+        printf("Cliente com o PID [%d] ainda esta vivo\n", info->si_value.sival_int);
+    }
 }
 
 void handle_sig_sair(int sig,siginfo_t *info,void *old){
     printf("O cliente com o PID [%d] saiu\n",info->si_value.sival_int);
     ///TODO:Retirar o cliente da lista e reordenar a lista
 }
+
+void processa_pedidos(){
+    ///sleep(1);
+    int fd = open(FIFO_SERVIDOR, O_WRONLY);
+    if(fd == -1){
+        printf("Erro ao abrir o fifo");
+        exit(1);
+    }
+    Item a;
+    int size = read(fd, &a, sizeof(User));
+    if(size > 0)
+        printf("Recebi um item do cliente %s",a.usernameVendedor);
+    close(fd);
+}
+
+
 
 void *temporizador(void *dados){
     TDATA *pd = dados;
@@ -240,15 +308,17 @@ void *temporizador(void *dados){
         sleep(1);//relogio do servidor(avancar um segundo)-decrementer um segundo ao leilao ativo;ter um int hora sempre a incrementar->fazer com o sleep
         pthread_mutex_lock(pd->ptrinco);
         tempo++;
-        printf("Tempo %ds\n", tempo);
+        //printf("Tempo %ds\n", tempo);
         pthread_mutex_unlock(pd->ptrinco);
     }while(pd->continua);
     pthread_exit(NULL);
 }
 
+
+
 int main(int argc,char *argv[],char *envp[]) {
     printf("Bem vindo Administrador\n");char str[128];
-    User a;
+    Comando a;
     fd_set fds;
     pthread_mutex_t trinco;
     pthread_t tid;
@@ -273,7 +343,7 @@ int main(int argc,char *argv[],char *envp[]) {
 
     initLista();
     leFichItens(getenv("FITEMS"));
-
+    getId(getenv("FITEMS"));//deixa o id com o valor correto
     //TODO:ACCESS
     if(mkfifo(FIFO_SERVIDOR, 0666) == -1){
         if(errno == EEXIST){
@@ -294,6 +364,8 @@ int main(int argc,char *argv[],char *envp[]) {
     data.ptrinco = &trinco;
     pthread_create(&tid,NULL, temporizador,&data);
 
+
+
     do{
         //T0
         printf("Comando:\n");
@@ -310,45 +382,55 @@ int main(int argc,char *argv[],char *envp[]) {
 
             pedeComando(str,numArgumento);
         }else if (res >0 && FD_ISSET(fdRecebe,&fds)) {
-            ///Le a informacao do cliente
-            int size = read(fdRecebe, &a, sizeof(User));
-            if (size > 0) {
-                //printf("[BACKEND] Recebi do frontend %d:%s %s\n", a.pid, a.nome, a.password);
-                sprintf(CLIENT_FIFO_FINAL, FIFO_CLIENTE, a.pid);
-                ///Tratar info
-                Resposta resposta;
-                loadUsersFile(getenv("FUSERS"));
-                int aux = isUserValid(a.nome, a.password);
-                if (aux == -1) {
-                    resposta.num = 0;
-                    fprintf(stderr, "Erro(funcao isUserValid)!");
-                    exit(1);
-                } else if (aux == 0) {
-                    resposta.num = 0;
-                    printf("Utilizador nao existe ou password errada!\n");
-                } else {
-                    resposta.num = 1;
-                    adicionaUserLista(a);
-                    printLista();
-                }
-                ///Enviar resposta ao cliente
-                resposta.pid = getpid();
-                int fdEnvio = open(CLIENT_FIFO_FINAL, O_WRONLY);
-                int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
-                if (size2 == -1) {
-                    fprintf(stderr, "Erro a escrever");
-                    exit(1);
-                }
-                close(fdEnvio);
-            } else {
-                printf("Erro ao na leitura\n");
-                exit(1);
-            }
+             ///Le a informacao do cliente
+             int size = read(fdRecebe, &a, sizeof(Comando));
+             if (size > 0) {
+                 if(a.comando == 0){//Verificar login
+                     //printf("[BACKEND] Recebi do frontend %d:%s %s\n", a.user.pid, a.user.nome, a.user.password);
+                     sprintf(CLIENT_FIFO_FINAL, FIFO_CLIENTE, a.user.pid);
+                     ///Tratar info
+                     Resposta resposta;
+                     loadUsersFile(getenv("FUSERS"));
+                     int aux = isUserValid(a.user.nome, a.user.password);
+                     if (aux == -1) {
+                         resposta.num = 0;
+                         fprintf(stderr, "Erro(funcao isUserValid)!");
+                         exit(1);
+                     } else if (aux == 0) {
+                         resposta.num = 0;
+                         printf("Utilizador nao existe ou password errada!\n");
+                     } else {
+                         resposta.num = 1;
+                         adicionaUserLista(a.user);
+                         printLista();
+                     }
+                     ///Enviar resposta ao cliente
+                     resposta.pid = getpid();
+                     int fdEnvio = open(CLIENT_FIFO_FINAL, O_WRONLY);
+                     int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
+                     if (size2 == -1) {
+                         fprintf(stderr, "Erro a escrever");
+                         exit(1);
+                     }
+                     close(fdEnvio);
+                 } else if(a.comando==1){//colocar item á venda
+                     //printf("Recebi um item crl!\n");
+                     //printf("Recebi um %s do utilizador %s\n",a.item.nome,a.item.usernameVendedor);
+                     addItemToFich(getenv("FITEMS"),a.item);
+                 }else if(a.comando == 2){
+                    list(getenv("FITEMS"));
+                 }
+
+             } else {
+                 printf("Erro ao na leitura\n");
+                 exit(1);
+             }
         }
     } while (strcmp(str,"close")!=0);
 
     data.continua=0;
     pthread_join(tid,NULL);
+
 
     pthread_mutex_destroy(&trinco);
     close(fdRecebe);

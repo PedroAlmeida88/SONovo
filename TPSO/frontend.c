@@ -6,6 +6,30 @@
 #include "utils.h"
 char CLIENT_FIFO_FINAL[100];
 int servPid=-1;
+char nome[32];
+int id=1;
+
+void colocaLeilao(char *nome,Item a){
+    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
+    if(fdEnvia == -1){
+        printf("Erro ao abrir o fifo");
+    }
+    Comando comando;
+    comando.item=a;
+    comando.comando=1;//enviar um item
+    int size = write(fdEnvia, &comando, sizeof(Comando));
+    close(fdEnvia);
+}
+void list(){
+    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
+    if(fdEnvia == -1){
+        printf("Erro ao abrir o fifo");
+    }
+    Comando comando;
+    comando.comando=2;//lista todos os itens
+    int size = write(fdEnvia, &comando, sizeof(Comando));
+    close(fdEnvia);
+}
 
 void pedeComandos(){
     while(1){
@@ -19,27 +43,35 @@ void pedeComandos(){
         fgets(str, 128, stdin);
         str[strcspn(str, "\n")] = 0;
 
-        printf("String: %s\n", str);
+        //printf("String: %s\n", str);
         strcpy(aux,str);
         numArgumento = numArgumentos(str);
-        printf("Num de Argumetos: %d\n", numArgumento);
+        //printf("Num de Argumetos: %d\n", numArgumento);
         char *token = strtok(str, " ");
 
         if(strcmp(token, "sell") == 0){
-            printf("String dentro: %s\n", str);
+            //printf("String dentro: %s\n", str);
 
             if(numArgumento != 6)
                 printf("Nao Valido\n");
             else if (sscanf(aux,"%s %s %s %d %d %d",buffer,nomeItem,categoria,&precoBase,&precoCompreJa,&duracao) != 6)
                 printf("Nao Valido\n");
-            else
-                printf("Valido\n");
+            else {
+                Item a;
+                strcpy(a.nome,nomeItem);a.duracao=duracao;strcpy(a.categoria,categoria);
+                strcpy(a.usernameVendedor,nome);strcpy(a.usernameLicitador,"-");
+                a.valAtual=precoBase;a.valCompreJa=precoCompreJa;
+                a.id = id++;
+                //todo:recuperar o id
+                colocaLeilao(nome, a);
+                printf("Item colocado para venda\n");
+            }
         }
         else if(strcmp(token, "list") == 0){
             if(numArgumento != 1)
                 printf("Nao Valido\n");
             else
-                printf("Valido\n");
+                list();
         }
         else if(strcmp(token, "licat") == 0){       //TODO:Ver se a categoria existe
             if(numArgumento != 2)
@@ -145,16 +177,19 @@ void funcSinalSair(){
     exit(1);
 }
 
+
 int main(int argc, char **argv, char **envp){
     if(argc != 3) {
         printf("[ERRO] Numero invalido de argumentos");
         exit(1);
     }
 
-    User a;
-    strcpy(a.nome,argv[1]);
-    strcpy(a.password,argv[2]);
-    a.pid = getpid();
+    Comando a;
+    strcpy(a.user.nome,argv[1]);
+    strcpy(a.user.password,argv[2]);
+    a.user.pid = getpid();
+    a.comando= 0;//validacao
+    strcpy(nome,argv[1]);
 
     ///Garantir que o servidor está ativo
     if(access(FIFO_SERVIDOR, F_OK) != 0){
@@ -176,7 +211,8 @@ int main(int argc, char **argv, char **envp){
     if(fdEnvia == -1){
         printf("Erro ao abrir o fifo");
     }
-    int size = write(fdEnvia, &a, sizeof(User));
+    int size = write(fdEnvia, &a, sizeof(Comando));
+
     close(fdEnvia);
     ///Receber a resposta do servidor
     int fdResposta = open(CLIENT_FIFO_FINAL, O_RDONLY);

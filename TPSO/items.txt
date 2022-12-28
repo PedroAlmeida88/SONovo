@@ -1,2 +1,5 @@
-12 sofa mobilia 1200 5000 10 JMarques MariaTonico
-13 sofa mobilia 1200 5400 3 JMarques MariaTonico
+2
+1 a b 5 4 3 a -
+2 a r 5 6 7 a -
+
+3 a r 5 6 7 a -

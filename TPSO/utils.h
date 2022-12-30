@@ -42,6 +42,7 @@ typedef struct {
 typedef struct resposta
 {
     int num;
+    int comando;
     pid_t pid;
 } Resposta;
 

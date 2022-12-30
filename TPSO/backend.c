@@ -23,7 +23,7 @@ void list(char *filename){
         fscanf(f,"%d",&tempo);
         while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
             printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
-            //TODO:Tratar informacao
+
         }
     }
     fclose(f);
@@ -315,6 +315,39 @@ void *temporizador(void *dados){
 }
 
 
+int fazLicitacao(char *filename,char *nome,int id, int valor){
+    Item item;
+    FILE *f;
+    f = fopen(filename,"rt");
+    if(f == NULL){
+        fprintf(stderr,"Ficheiro nao encontrado\n");
+        return -1;
+    }else{
+        fscanf(f,"%d",&tempo);
+
+        while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
+            if(item.id == id) {
+                loadUsersFile(getenv("FUSERS"));
+                if (valor < item.valAtual) {//ver se tem dinheiro
+                    printf("Valor inferioar ao atual\n");
+                    return 1;
+                } else if (valor > getUserBalance(nome)) {//ver se o utilizador tem saldo suficiente
+                    printf("Dinheiro insuficiente na conta\n");
+                    return 1;
+                } else{
+                    printf("Licitacao feita!\n");
+                    updateUserBalance(nome,getUserBalance("TESTE")-valor);///Tiro o valor ja ou so se comprar?
+                    //Substituir o item antigo pelo item atualizado
+                }
+                saveUsersFile(getenv("FUSERS"));
+            }
+
+        }
+    }
+    fclose(f);
+
+
+}
 
 int main(int argc,char *argv[],char *envp[]) {
     printf("Bem vindo Administrador\n");char str[128];
@@ -373,8 +406,9 @@ int main(int argc,char *argv[],char *envp[]) {
         FD_ZERO(&fds);
         FD_SET(0,&fds);//tomar atenção ao 0(scanf)
         FD_SET(fdRecebe,&fds);//tomar atenção ao fdReceber -> read
-        int res = select(fdRecebe+1,&fds,NULL,NULL,/*&tv*/NULL);//colocar o ultimo + 1 |
-         if(res >0 && FD_ISSET(0,&fds)){
+        int res = select(fdRecebe+1,&fds,NULL,NULL,NULL);
+
+        if(res >0 && FD_ISSET(0,&fds)){
             fflush(stdout);
             fgets(str, 128, stdin);
             str[strcspn(str, "\n")] = 0;
@@ -391,6 +425,7 @@ int main(int argc,char *argv[],char *envp[]) {
                      ///Tratar info
                      Resposta resposta;
                      loadUsersFile(getenv("FUSERS"));
+                     resposta.comando = 1;
                      int aux = isUserValid(a.user.nome, a.user.password);
                      if (aux == -1) {
                          resposta.num = 0;
@@ -419,6 +454,17 @@ int main(int argc,char *argv[],char *envp[]) {
                      addItemToFich(getenv("FITEMS"),a.item);
                  }else if(a.comando == 2){
                     list(getenv("FITEMS"));
+
+                 }else if(a.comando == 7){
+                     int id = a.item.id;
+                     int valor = a.item.valAtual;
+                     int res = fazLicitacao(getenv("FITEMS"),a.user.nome,id, valor);
+                     if(res == 0){
+                         printf("Licitacao efetuada com sucesso!");
+                     }else if(res == 1){
+                         printf("Saldo insuficiente ou item nao existe");
+                     }
+                     //TODO: Enviar feedback ao utilizador
                  }
 
              } else {

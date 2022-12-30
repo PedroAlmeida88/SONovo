@@ -17,8 +17,10 @@ void colocaLeilao(char *nome,Item a){
     Comando comando;
     comando.item=a;
     comando.comando=1;//enviar um item
+
     int size = write(fdEnvia, &comando, sizeof(Comando));
     close(fdEnvia);
+
 }
 void list(){
     int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
@@ -29,6 +31,24 @@ void list(){
     comando.comando=2;//lista todos os itens
     int size = write(fdEnvia, &comando, sizeof(Comando));
     close(fdEnvia);
+
+}
+
+void licita(int id,int valor){
+    //valor tem de ser mais alto do que a licitacao atual
+    //tem ter o dinheiro
+    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
+    if(fdEnvia == -1){
+        printf("Erro ao abrir o fifo");
+    }
+    Comando comando;
+    comando.item.id = id;
+    comando.item.valAtual = valor;
+    comando.comando=7;//enviar um item
+    strcpy(comando.user.nome,nome);
+    int size = write(fdEnvia, &comando, sizeof(Comando));
+    close(fdEnvia);
+
 }
 
 void pedeComandos(){
@@ -115,7 +135,7 @@ void pedeComandos(){
             else if(sscanf(aux,"%s %d %d",buffer,&id,&valor) != 3)
                 printf("Nao Valido2\n");
             else {
-                printf("Valido\n");
+                licita(id,valor);
             }
         }
         else if(strcmp(token, "cash") == 0){

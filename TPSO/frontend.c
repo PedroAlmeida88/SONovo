@@ -42,6 +42,69 @@ void list(){
 
 }
 
+void listCat(char *categoria){
+    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
+    if(fdEnvia == -1){
+        printf("Erro ao abrir o fifo");
+    }
+    Comando comando;
+    strcpy(comando.item.categoria,categoria);
+    comando.comando=3;//lista todos os itens de uma categoria
+    int size = write(fdEnvia, &comando, sizeof(Comando));
+    close(fdEnvia);
+
+}
+
+void listVen(char *vendedor){
+    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
+    if(fdEnvia == -1){
+        printf("Erro ao abrir o fifo");
+    }
+    Comando comando;
+    strcpy(comando.item.usernameVendedor,vendedor);
+    comando.comando=4;//lista todos os itens de uma categoria
+    int size = write(fdEnvia, &comando, sizeof(Comando));
+    close(fdEnvia);
+
+}
+
+void listVal(int val){
+    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
+    if(fdEnvia == -1){
+        printf("Erro ao abrir o fifo");
+    }
+    Comando comando;
+    comando.item.valAtual=val;
+    comando.comando=5;//lista todos os itens de uma categoria
+    int size = write(fdEnvia, &comando, sizeof(Comando));
+    close(fdEnvia);
+
+}
+void listTemp(int tempo){
+    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
+    if(fdEnvia == -1){
+        printf("Erro ao abrir o fifo");
+    }
+    Comando comando;
+    comando.item.duracao=tempo;
+    comando.comando=6;//lista todos os itens de uma categoria
+    int size = write(fdEnvia, &comando, sizeof(Comando));
+    close(fdEnvia);
+
+}
+
+void pedeHora(){
+    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
+    if(fdEnvia == -1){
+        printf("Erro ao abrir o fifo");
+    }
+    Comando comando;
+    comando.comando=7;//lista todos os itens de uma categoria
+    int size = write(fdEnvia, &comando, sizeof(Comando));
+    close(fdEnvia);
+
+}
+
 void licita(int id,int valor){
     //valor tem de ser mais alto do que a licitacao atual
     //tem ter o dinheiro
@@ -52,11 +115,37 @@ void licita(int id,int valor){
     Comando comando;
     comando.item.id = id;
     comando.item.valAtual = valor;
-    comando.comando=7;//enviar um item
+    comando.comando=8;//enviar um item
     strcpy(comando.user.nome,nome);
     int size = write(fdEnvia, &comando, sizeof(Comando));
     close(fdEnvia);
 
+}
+
+void pedeSaldo(char *nome){
+    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
+    if(fdEnvia == -1){
+        printf("Erro ao abrir o fifo");
+    }
+    Comando comando;
+    strcpy(comando.user.nome,nome);
+    comando.comando=9;//lista todos os itens de uma categoria
+    int size = write(fdEnvia, &comando, sizeof(Comando));
+    close(fdEnvia);
+
+}
+
+void addSaldo(int saldo){
+    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
+    if(fdEnvia == -1){
+        printf("Erro ao abrir o fifo");
+    }
+    Comando comando;
+    comando.item.valAtual = saldo;
+    strcpy(comando.user.nome,nome);
+    comando.comando=10;//lista todos os itens de uma categoria
+    int size = write(fdEnvia, &comando, sizeof(Comando));
+    close(fdEnvia);
 }
 
 char* pedeComandos(){
@@ -90,9 +179,7 @@ char* pedeComandos(){
                 strcpy(a.nome,nomeItem);a.duracao=duracao;strcpy(a.categoria,categoria);
                 strcpy(a.usernameVendedor,nome);strcpy(a.usernameLicitador,"-");
                 a.valAtual=precoBase;a.valCompreJa=precoCompreJa;
-                a.id = id++;
-                //todo:recuperar o id
-                colocaLeilao(nome, a);
+                colocaLeilao(nome,a);
                 printf("Item colocado para venda\n");
             }
         }
@@ -107,8 +194,8 @@ char* pedeComandos(){
                 printf("Nao Valido\n");
             else {
                 token = strtok(NULL, " ");
-                printf("Nome da categoria: %s\n", token);
-                printf("Valido\n");
+                //printf("Nome da categoria: %s\n", token);
+                listCat(token);
             }
         }
         else if(strcmp(token, "lisel") == 0){       //TODO:Ver se o vendedor existe
@@ -116,8 +203,18 @@ char* pedeComandos(){
                 printf("Nao Valido\n");
             else{
                 token = strtok(NULL, " ");
-                printf("Nome do vendedor: %s\n", token);
-                printf("Valido\n");
+                //printf("Nome do vendedor: %s\n", token);
+                listVen(token);
+            }
+
+        }
+        else if(strcmp(token, "lival") == 0){       //TODO:Ver se o vendedor existe
+            if(numArgumento != 2)
+                printf("Nao Valido\n");
+            else{
+                token = strtok(NULL, " ");
+                //printf("Nome do vendedor: %s\n", token);
+                listVal(atoi(token));
             }
 
         }
@@ -128,7 +225,7 @@ char* pedeComandos(){
                 token = strtok(NULL, " ");
                 duracao = atoi(token);
                 printf("Hora em segundos: %d\n", duracao);
-                printf("Valido\n");
+                listTemp(duracao);
             }
 
         }
@@ -136,7 +233,7 @@ char* pedeComandos(){
             if(numArgumento != 1)
                 printf("Nao Valido\n");
             else
-                printf("Valido\n");
+                pedeHora();
         }
         else if(strcmp(token, "buy") == 0){
             if(numArgumento != 3)
@@ -151,7 +248,7 @@ char* pedeComandos(){
             if(numArgumento != 1)
                 printf("Nao Valido\n");
             else
-                printf("Valido\n");
+                pedeSaldo(nome);
         }
         else if(strcmp(token, "add") == 0){
             if(numArgumento != 2)
@@ -159,8 +256,7 @@ char* pedeComandos(){
             else{
                 token = strtok(NULL, " ");
                 valor = atoi(token);
-                printf("Valor: %d\n", valor);
-                printf("Valido\n");
+                addSaldo(valor);
             }
 
         }
@@ -221,12 +317,27 @@ void *trata_pipe(void *dados){
                     printf("Utilizador desconecido ou password errada!\n");
                     exit(1);
                 }
-            }else if(resposta.comando == 2){
+            }else if(resposta.comando == 0){
+                printf("O item adicionado tem o id %d\n",resposta.item.id);
+            }
+            else if(resposta.comando == 2 || resposta.comando == 3 || resposta.comando == 4 || resposta.comando == 5 || resposta.comando == 6){
                 Item item;
                 item = resposta.item;
-                printf("\n%d %s %s %d %d %d %s %s", item.id, item.nome, item.categoria, item.valAtual,
-                          item.valCompreJa, item.duracao, item.usernameVendedor, item.usernameLicitador);
+                //printf("\nId:%d Nome:%s Cat:%s  VAtual:%d VComprar:%d Duracao:%d NVendedor:%s NLicitador:%s", item.id, item.nome, item.categoria, item.valAtual,
+                //          item.valCompreJa, item.duracao, item.usernameVendedor, item.usernameLicitador);
+                printf("\nId:%d Nome:%s %s %d %d %d %s %s\n", item.id, item.nome, item.categoria, item.valAtual,
+                        item.valCompreJa, item.duracao, item.usernameVendedor, item.usernameLicitador);
+
+            }else if(resposta.comando == 7){
+                printf("\nHora atual: %d\n",resposta.num);
+            }else if(resposta.comando == 8){
+                printf("%s\n",resposta.item.categoria);
+            }else if(resposta.comando == 9){
+                printf("\nSaldo atual: %d\n",resposta.num);
+            }else if(resposta.comando == 10){
+                printf("\nSaldo adicionado!\nSaldo Atual: %d\n",resposta.num);
             }
+
         }else{
             fprintf(stderr,"Erro na leitura");
             exit(1);
@@ -331,6 +442,8 @@ int main(int argc, char **argv, char **envp){
     close(fdResposta);
     unlink(CLIENT_FIFO_FINAL);
     printf("A avisar o servidor que irei sair\n");
+    //avisar o servidor que vou encerrar
+
     union sigval info;
     struct sigaction sa;
     info.sival_int = getpid();  //enviar o PID ao backend

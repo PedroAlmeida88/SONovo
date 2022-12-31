@@ -12,6 +12,21 @@ typedef struct {
     pthread_mutex_t *ptrinco;
 }TDATA;
 
+void listProdutos(char *filename){
+    Item item;
+    FILE *f;
+    f = fopen(filename,"rt");
+    if(f == NULL){
+        fprintf(stderr,"Ficheiro nao encontrado\n");
+        return;
+    }else{
+        fscanf(f,"%d",&tempo);
+        while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
+            printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
+        }
+    }
+}
+
 void list(char *filename){
     Item item;
     FILE *f;
@@ -23,7 +38,7 @@ void list(char *filename){
     }else{
         fscanf(f,"%d",&tempo);
         while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
-            printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
+            //printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
             resposta.pid = getpid();
             resposta.item = item;
             resposta.comando = 2;
@@ -37,6 +52,237 @@ void list(char *filename){
         }
     }
     fclose(f);
+}
+
+void listCat(char *filename,char *categoria){
+    Item item;
+    FILE *f;
+    Resposta resposta;
+    f = fopen(filename,"rt");
+    if(f == NULL){
+        fprintf(stderr,"Ficheiro nao encontrado\n");
+        return;
+    }else{
+        fscanf(f,"%d",&tempo);
+        while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
+            //printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
+            if(strcmp(categoria,item.categoria) == 0) {
+                resposta.pid = getpid();
+                resposta.item = item;
+                resposta.comando = 3;
+                int fdEnvio = open(CLIENT_FIFO_FINAL, O_WRONLY);
+                int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
+                if (size2 == -1) {
+                    fprintf(stderr, "Erro a escrever");
+                    exit(1);
+                }
+                close(fdEnvio);
+            }
+        }
+    }
+    fclose(f);
+}
+
+void listSel(char *filename,char *vendedor){
+    Item item;
+    FILE *f;
+    Resposta resposta;
+    f = fopen(filename,"rt");
+    if(f == NULL){
+        fprintf(stderr,"Ficheiro nao encontrado\n");
+        return;
+    }else{
+        fscanf(f,"%d",&tempo);
+        while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
+            //printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
+            if(strcmp(vendedor,item.usernameVendedor) == 0) {
+                resposta.pid = getpid();
+                resposta.item = item;
+                resposta.comando = 4;
+                int fdEnvio = open(CLIENT_FIFO_FINAL, O_WRONLY);
+                int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
+                if (size2 == -1) {
+                    fprintf(stderr, "Erro a escrever");
+                    exit(1);
+                }
+                close(fdEnvio);
+            }
+        }
+    }
+    fclose(f);
+}
+
+void listVal(char *filename,int val){
+    Item item;
+    FILE *f;
+    Resposta resposta;
+    f = fopen(filename,"rt");
+    if(f == NULL){
+        fprintf(stderr,"Ficheiro nao encontrado\n");
+        return;
+    }else{
+        fscanf(f,"%d",&tempo);
+        while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
+            //printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
+            if(item.valAtual <= val) {
+                resposta.pid = getpid();
+                resposta.item = item;
+                resposta.comando = 5;
+                int fdEnvio = open(CLIENT_FIFO_FINAL, O_WRONLY);
+                int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
+                if (size2 == -1) {
+                    fprintf(stderr, "Erro a escrever");
+                    exit(1);
+                }
+                close(fdEnvio);
+            }
+        }
+    }
+    fclose(f);
+}
+
+void listTemp(char *filename,int val){
+    Item item;
+    FILE *f;
+    Resposta resposta;
+    f = fopen(filename,"rt");
+    if(f == NULL){
+        fprintf(stderr,"Ficheiro nao encontrado\n");
+        return;
+    }else{
+        fscanf(f,"%d",&tempo);
+        while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
+            if(item.duracao <= val) {
+                //printf("Valor %d\n",val);
+                //printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
+
+                resposta.pid = getpid();
+                resposta.item = item;
+                resposta.comando = 6;
+                int fdEnvio = open(CLIENT_FIFO_FINAL, O_WRONLY);
+                int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
+                if (size2 == -1) {
+                    fprintf(stderr, "Erro a escrever");
+                    exit(1);
+                }
+                close(fdEnvio);
+            }
+        }
+    }
+    fclose(f);
+}
+
+void devolveHora(){
+    Resposta resposta;
+    resposta.pid = getpid();
+    resposta.num = tempo;
+    resposta.comando = 7;
+    int fdEnvio = open(CLIENT_FIFO_FINAL, O_WRONLY);
+    int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
+    if (size2 == -1) {
+        fprintf(stderr, "Erro a escrever");
+        exit(1);
+    }
+    close(fdEnvio);
+}
+
+void consultaSaldo(char *nome){
+    Resposta resposta;
+    resposta.pid = getpid();
+    resposta.comando = 9;
+    loadUsersFile(getenv("FUSERS"));
+    resposta.num = getUserBalance(nome);
+    saveUsersFile(getenv("FUSERS"));
+    int fdEnvio = open(CLIENT_FIFO_FINAL, O_WRONLY);
+    int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
+    if (size2 == -1) {
+        fprintf(stderr, "Erro a escrever");
+        exit(1);
+    }
+    close(fdEnvio);
+}
+
+void adicionaSaldo(char *nome,int valor){
+    Resposta resposta;
+    resposta.pid = getpid();
+    resposta.comando = 10;
+    loadUsersFile(getenv("FUSERS"));
+    updateUserBalance(nome, getUserBalance(nome)+valor);
+    resposta.num = getUserBalance(nome);
+    saveUsersFile(getenv("FUSERS"));
+    int fdEnvio = open(CLIENT_FIFO_FINAL, O_WRONLY);
+    int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
+    if (size2 == -1) {
+        fprintf(stderr, "Erro a escrever");
+        exit(1);
+    }
+    close(fdEnvio);
+}
+
+void addItemToFich(char *filename,Item item){
+    FILE *f;
+    Resposta resposta;
+    f = fopen(filename,"a");
+    if(f == NULL){
+        fprintf(stderr,"Ficheiro nao encontrado\n");
+        return;
+    }else{
+        item.id = id++;
+        fprintf(f,"\n%d %s %s %d %d %d %s %s",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
+    }
+    fclose(f);
+    resposta.comando = 0;
+    resposta.item.id = id-1;
+    int fdEnvio = open(CLIENT_FIFO_FINAL, O_WRONLY);
+    int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
+    if (size2 == -1) {
+        fprintf(stderr, "Erro a escrever");
+        exit(1);
+    }
+    close(fdEnvio);
+}
+
+void fazLicitacao(char *filename,char *nome,int id, int valor){
+    Item item;
+    FILE *f;
+    Resposta resposta;
+    f = fopen(filename,"a+");
+    if(f == NULL){
+        fprintf(stderr,"Ficheiro nao encontrado\n");
+        return;
+    }else{
+        fscanf(f,"%d",&tempo);
+        while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
+            if(item.id == id) {
+                loadUsersFile(getenv("FUSERS"));
+                if (valor < item.valAtual) {//ver se tem dinheiro
+                    strcpy(resposta.item.categoria,"Valor inferoir ao atual!");
+                } else if (valor > getUserBalance(nome)) {//ver se o utilizador tem saldo suficiente
+                    strcpy(resposta.item.categoria,"Dinheiro insuficiente na conta");
+                } else{
+                    strcpy(resposta.item.categoria,"Licitacao efetuada!");
+                    //updateUserBalance(nome,getUserBalance("TESTE")-valor);///Tiro o valor ja ou so se comprar?
+                    //Substituir o item antigo pelo item atualizado
+                    item.valAtual = valor;
+                    strcpy(item.usernameLicitador,nome);
+                    fprintf(f,"%d %s %s %d %d %d %s %s",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
+                }
+                saveUsersFile(getenv("FUSERS"));
+            }
+
+        }
+    }
+    fclose(f);
+
+    resposta.comando = 8;
+    int fdEnvio = open(CLIENT_FIFO_FINAL, O_WRONLY);
+    int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
+    if (size2 == -1) {
+        fprintf(stderr, "Erro a escrever");
+        exit(1);
+    }
+    close(fdEnvio);
+
 }
 
 void getId(char *filename){
@@ -71,19 +317,6 @@ void leFichItens(char *filename) {
             //printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
             //TODO:Tratar informacao
         }
-    }
-    fclose(f);
-}
-
-void addItemToFich(char *filename,Item item){
-    FILE *f;
-    f = fopen(filename,"a");
-    if(f == NULL){
-        fprintf(stderr,"Ficheiro nao encontrado\n");
-        return;
-    }else{
-        item.id = id++;
-        fprintf(f,"\n%d %s %s %d %d %d %s %s",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
     }
     fclose(f);
 }
@@ -182,7 +415,7 @@ void pedeComando(char *str,int numArgumento ){
         if (numArgumento != 1)
             printf("Nao Valido\n");
         else
-            printf("Valido\n");
+            listProdutos(getenv("FITEMS"));
     } else if (strcmp(token, "kick") == 0) {
         if (numArgumento != 2)
             printf("Nao Valido\n");
@@ -295,22 +528,6 @@ void handle_sig_sair(int sig,siginfo_t *info,void *old){
     ///TODO:Retirar o cliente da lista e reordenar a lista
 }
 
-void processa_pedidos(){
-    ///sleep(1);
-    int fd = open(FIFO_SERVIDOR, O_WRONLY);
-    if(fd == -1){
-        printf("Erro ao abrir o fifo");
-        exit(1);
-    }
-    Item a;
-    int size = read(fd, &a, sizeof(User));
-    if(size > 0)
-        printf("Recebi um item do cliente %s",a.usernameVendedor);
-    close(fd);
-}
-
-
-
 void *temporizador(void *dados){
     TDATA *pd = dados;
     //TODO:Guardar o tempo e para ser inicializado depois
@@ -322,42 +539,6 @@ void *temporizador(void *dados){
         pthread_mutex_unlock(pd->ptrinco);
     }while(pd->continua);
     pthread_exit(NULL);
-}
-
-
-int fazLicitacao(char *filename,char *nome,int id, int valor){
-    Item item;
-    FILE *f;
-    f = fopen(filename,"rt");
-    if(f == NULL){
-        fprintf(stderr,"Ficheiro nao encontrado\n");
-        return -1;
-    }else{
-        fscanf(f,"%d",&tempo);
-
-        while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
-            if(item.id == id) {
-                loadUsersFile(getenv("FUSERS"));
-                if (valor < item.valAtual) {//ver se tem dinheiro
-                    printf("Valor inferioar ao atual\n");
-                    return 1;
-                } else if (valor > getUserBalance(nome)) {//ver se o utilizador tem saldo suficiente
-                    printf("Dinheiro insuficiente na conta\n");
-                    return 1;
-                } else{
-                    printf("Licitacao feita!\n");
-                    updateUserBalance(nome,getUserBalance("TESTE")-valor);///Tiro o valor ja ou so se comprar?
-                    //Substituir o item antigo pelo item atualizado
-                    return 0;
-                }
-                saveUsersFile(getenv("FUSERS"));
-            }
-
-        }
-    }
-    fclose(f);
-
-
 }
 
 int main(int argc,char *argv[],char *envp[]) {
@@ -464,20 +645,28 @@ int main(int argc,char *argv[],char *envp[]) {
                      printf("Recebi um %s do utilizador %s\n",a.item.nome,a.item.usernameVendedor);
                      addItemToFich(getenv("FITEMS"),a.item);
 
-                 }else if(a.comando == 2){
+                 }else if(a.comando == 2) {
                      list(getenv("FITEMS"));
-                    //enviar resposta com resposta.comando = 2;
+                     //enviar resposta com resposta.comando = 2;
+                 }else if(a.comando == 3){
+                     listCat(getenv("FITEMS"),a.item.categoria);
+                 }else if(a.comando == 4) {
+                     listSel(getenv("FITEMS"), a.item.usernameVendedor);
+                 }else if(a.comando == 5){
+                     listVal(getenv("FITEMS"), a.item.valAtual);
+                 }else if(a.comando == 6){
+                     listTemp(getenv("FITEMS"), a.item.duracao);
                  }else if(a.comando == 7){
-                     int id = a.item.id;
-                     int valor = a.item.valAtual;
-                     int result = fazLicitacao(getenv("FITEMS"),a.user.nome,id, valor);
-                     if(result == 0){
-                         printf("Licitacao efetuada com sucesso!");
-                     }else if(result == 1){
-                         printf("Saldo insuficiente ou item nao existe");
-                     }
-                     //TODO: Enviar feedback ao utilizador
+                     devolveHora();
+                 }else if(a.comando == 8){
+                     fazLicitacao(getenv("FITEMS"),a.user.nome,a.item.id,a.item.valAtual);
+                 }else if(a.comando == 9){
+                        consultaSaldo(a.user.nome);
+                 }else if(a.comando == 10){
+                        adicionaSaldo(a.user.nome,a.item.valAtual);
                  }
+
+
 
              } else {
                  fprintf(stderr,"Erro na leitura");

@@ -9,6 +9,13 @@ int servPid=-1;
 char nome[32];
 int id=1;
 
+typedef struct {
+    int continua;
+    //int *clientes;//tudo o que é partilhado, é um ponteiro
+    int fdResposta;
+    pthread_mutex_t *ptrinco;
+}TDATA;
+
 void colocaLeilao(char *nome,Item a){
     int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
     if(fdEnvia == -1){
@@ -22,6 +29,7 @@ void colocaLeilao(char *nome,Item a){
     close(fdEnvia);
 
 }
+
 void list(){
     int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
     if(fdEnvia == -1){
@@ -51,13 +59,14 @@ void licita(int id,int valor){
 
 }
 
-void pedeComandos(){
+char* pedeComandos(){
     while(1){
         int numArgumento;
         char buffer[50],nomeItem[50],categoria[50],aux[128];
         int precoBase,precoCompreJa,duracao,id,valor;
         char str[128];
 
+        sleep((unsigned int) 0.1);
         printf("Comando:");
         fflush(stdout);
         fgets(str, 128, stdin);
@@ -159,8 +168,7 @@ void pedeComandos(){
             if(numArgumento != 1)
                 printf("Nao Valido\n");
             else {
-                printf("Valido\n");
-                break;
+                return token;
             }
         }
         else {
@@ -197,6 +205,37 @@ void funcSinalSair(){
     exit(1);
 }
 
+void *trata_pipe(void *dados){
+    TDATA *pd = dados;
+    Resposta resposta;
+    do{
+        ///Le a informacao do cliente
+        pthread_mutex_lock(pd->ptrinco);
+        int size2 = read(pd->fdResposta, &resposta, sizeof(Resposta));
+        pthread_mutex_unlock(pd->ptrinco);
+        if(size2 > 0){
+            if(resposta.comando == 1){
+                    if(resposta.num == 1){
+                    printf("Bem vindo %s!\n",nome);
+                }else{
+                    printf("Utilizador desconecido ou password errada!\n");
+                    exit(1);
+                }
+            }else if(resposta.comando == 2){
+                Item item;
+                item = resposta.item;
+                printf("\n%d %s %s %d %d %d %s %s", item.id, item.nome, item.categoria, item.valAtual,
+                          item.valCompreJa, item.duracao, item.usernameVendedor, item.usernameLicitador);
+            }
+        }else{
+            fprintf(stderr,"Erro na leitura");
+            exit(1);
+        }
+
+
+    }while(pd->continua);
+    pthread_exit(NULL);
+}
 
 int main(int argc, char **argv, char **envp){
     if(argc != 3) {
@@ -210,6 +249,10 @@ int main(int argc, char **argv, char **envp){
     a.user.pid = getpid();
     a.comando= 0;//validacao
     strcpy(nome,argv[1]);
+
+    pthread_mutex_t trinco;
+    pthread_t tid;
+    TDATA data;
 
     ///Garantir que o servidor está ativo
     if(access(FIFO_SERVIDOR, F_OK) != 0){
@@ -235,25 +278,19 @@ int main(int argc, char **argv, char **envp){
 
     close(fdEnvia);
     ///Receber a resposta do servidor
-    int fdResposta = open(CLIENT_FIFO_FINAL, O_RDONLY);
+    int fdResposta = open(CLIENT_FIFO_FINAL, O_RDWR);
     if(fdResposta == -1){
         printf("Erro ao abrir o fifo");
     }
-    Resposta resposta;
-    int size2 = read(fdResposta, &resposta, sizeof(Resposta));
-    if(size2 == -1){
-        fprintf(stderr,"Erro na leitura");
-        exit(1);
-    }
 
-    if(resposta.num == 1){
-        printf("Bem vindo %s!\n",argv[1]);
-    }else{
-        printf("Utilizador desconecido ou password errada!\n");
-        exit(1);
-    }
-    close(fdResposta);
-    unlink(CLIENT_FIFO_FINAL);
+    pthread_mutex_init(&trinco,NULL);
+    //T1
+    data.continua = 1;
+    data.ptrinco = &trinco;
+    data.fdResposta = fdResposta;
+    pthread_create(&tid,NULL, trata_pipe,&data);
+    Resposta resposta;
+
 
     //caso o servidor seja encerrado
     struct sigaction sa3;
@@ -281,10 +318,18 @@ int main(int argc, char **argv, char **envp){
     sigaction(SIGALRM,&saAlarm,NULL);
     //TODO:alarm(atoi(getenv("HEARTBEAT")));
     alarm(5);
+    char str[128];
+    do{//T0
+        strcpy(str,pedeComandos());
+    } while (strcmp(str,"exit")!=0);
 
-    pedeComandos();
+    data.continua=0;
+    pthread_cancel(tid);
+    pthread_join(tid,NULL);
 
-
+    pthread_mutex_destroy(&trinco);
+    close(fdResposta);
+    unlink(CLIENT_FIFO_FINAL);
     printf("A avisar o servidor que irei sair\n");
     union sigval info;
     struct sigaction sa;

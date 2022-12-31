@@ -15,6 +15,7 @@ typedef struct {
 void list(char *filename){
     Item item;
     FILE *f;
+    Resposta resposta;
     f = fopen(filename,"rt");
     if(f == NULL){
         fprintf(stderr,"Ficheiro nao encontrado\n");
@@ -23,7 +24,16 @@ void list(char *filename){
         fscanf(f,"%d",&tempo);
         while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
             printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
-
+            resposta.pid = getpid();
+            resposta.item = item;
+            resposta.comando = 2;
+            int fdEnvio = open(CLIENT_FIFO_FINAL, O_WRONLY);
+            int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
+            if (size2 == -1) {
+                fprintf(stderr, "Erro a escrever");
+                exit(1);
+            }
+            close(fdEnvio);
         }
     }
     fclose(f);
@@ -338,6 +348,7 @@ int fazLicitacao(char *filename,char *nome,int id, int valor){
                     printf("Licitacao feita!\n");
                     updateUserBalance(nome,getUserBalance("TESTE")-valor);///Tiro o valor ja ou so se comprar?
                     //Substituir o item antigo pelo item atualizado
+                    return 0;
                 }
                 saveUsersFile(getenv("FUSERS"));
             }
@@ -450,25 +461,26 @@ int main(int argc,char *argv[],char *envp[]) {
                      close(fdEnvio);
                  } else if(a.comando==1){//colocar item á venda
                      //printf("Recebi um item crl!\n");
-                     //printf("Recebi um %s do utilizador %s\n",a.item.nome,a.item.usernameVendedor);
+                     printf("Recebi um %s do utilizador %s\n",a.item.nome,a.item.usernameVendedor);
                      addItemToFich(getenv("FITEMS"),a.item);
-                 }else if(a.comando == 2){
-                    list(getenv("FITEMS"));
 
+                 }else if(a.comando == 2){
+                     list(getenv("FITEMS"));
+                    //enviar resposta com resposta.comando = 2;
                  }else if(a.comando == 7){
                      int id = a.item.id;
                      int valor = a.item.valAtual;
-                     int res = fazLicitacao(getenv("FITEMS"),a.user.nome,id, valor);
-                     if(res == 0){
+                     int result = fazLicitacao(getenv("FITEMS"),a.user.nome,id, valor);
+                     if(result == 0){
                          printf("Licitacao efetuada com sucesso!");
-                     }else if(res == 1){
+                     }else if(result == 1){
                          printf("Saldo insuficiente ou item nao existe");
                      }
                      //TODO: Enviar feedback ao utilizador
                  }
 
              } else {
-                 printf("Erro ao na leitura\n");
+                 fprintf(stderr,"Erro na leitura");
                  exit(1);
              }
         }

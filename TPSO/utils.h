@@ -36,6 +36,7 @@ typedef struct Utilizador
 typedef struct {
     Item item;
     User user;
+    pid_t pid;
     int comando;
 }Comando;
 

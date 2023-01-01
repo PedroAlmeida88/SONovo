@@ -6,11 +6,44 @@ User ListaClientes[20];
 int nUsers=0;
 int tempo=0;
 int id=1;
+char listaPromotores[10][50];
+pthread_t tid[11];
 
 typedef struct {
     int continua;
+    int numProm;
     pthread_mutex_t *ptrinco;
 }TDATA;
+
+void preencheLista(char * filename){
+    FILE *f;Promocao prom;
+    char nomePromotor[50];
+    f= fopen(filename,"rt");
+    int count=0;
+    if(f == NULL) {
+        printf("Erro ao abrir o ficheiro");
+        return;
+    }else{
+        while (fscanf(f,"%s",nomePromotor) != EOF){
+            strcpy(listaPromotores[count],nomePromotor);
+            count++;
+        }
+        if(count > 10)
+            return;
+        do{
+            strcpy(listaPromotores[count],"-");
+
+            count++;
+        } while (count < 10);
+
+    }
+}
+
+void mostraLista(){
+    for(int i = 0;i<10;i++){
+        printf("Promotor num %d: %s\n",i+1,listaPromotores[i]);
+    }
+}
 
 void listProdutos(char *filename){
     Item item;
@@ -247,6 +280,7 @@ void fazLicitacao(char *filename,char *nome,int id, int valor){
     FILE *f;
     Resposta resposta;
     f = fopen(filename,"a+");
+    int flag=0;
     if(f == NULL){
         fprintf(stderr,"Ficheiro nao encontrado\n");
         return;
@@ -254,6 +288,7 @@ void fazLicitacao(char *filename,char *nome,int id, int valor){
         fscanf(f,"%d",&tempo);
         while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
             if(item.id == id) {
+                flag=1;
                 loadUsersFile(getenv("FUSERS"));
                 if (valor < item.valAtual) {//ver se tem dinheiro
                     strcpy(resposta.item.categoria,"Valor inferoir ao atual!");
@@ -265,7 +300,7 @@ void fazLicitacao(char *filename,char *nome,int id, int valor){
                     //Substituir o item antigo pelo item atualizado
                     item.valAtual = valor;
                     strcpy(item.usernameLicitador,nome);
-                    fprintf(f,"%d %s %s %d %d %d %s %s",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
+                    //fprintf(f,"%d %s %s %d %d %d %s %s",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
                 }
                 saveUsersFile(getenv("FUSERS"));
             }
@@ -273,7 +308,8 @@ void fazLicitacao(char *filename,char *nome,int id, int valor){
         }
     }
     fclose(f);
-
+    if(flag == 0)
+        strcpy(resposta.item.categoria,"O item nao existe!");
     resposta.comando = 8;
     int fdEnvio = open(CLIENT_FIFO_FINAL, O_WRONLY);
     int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
@@ -355,6 +391,22 @@ void adicionaUserLista(User a){
     }
 }
 
+
+void paraPromotor(char *nomePromotor){
+    //matar thread e processo?
+    int flag=0;
+    for(int i = 0;i<10;i++){
+        if (strcmp(nomePromotor,listaPromotores[i]) ==0){
+            pthread_cancel(tid[i+1]);
+            strcpy(listaPromotores[i],"-");
+            //kill(,SIGKILL);
+            flag=1;
+        }
+    }
+    //if(flag == 0)
+    //    printf("Promotor desconhecido!\n");
+}
+/*
 void executaPromotores(char* filename){
     FILE *f;Promocao prom;
     char nomePromotor[50];
@@ -371,6 +423,40 @@ void executaPromotores(char* filename){
             printf("Duracao: %d\n\n",prom.duracao);
         }
     }
+}
+*/
+void listaPAtivos(){
+    printf("Lista de promotores ativos:\n");
+    for(int i =0;i<10;i++){
+        if(strcmp("-",listaPromotores[i]) !=0){
+            printf("%s\n",listaPromotores[i]);
+        }
+    }
+}
+
+void reprom(char *filename){
+    char listaPromotoresAux[10][50];
+    for (int i = 0; i < 10; i++) {
+        strcpy(listaPromotoresAux[i],listaPromotores[i]);
+    }//lista auxiliar tem a lista de promotores antigos
+    preencheLista(filename);//lista original é atualizada
+    int flag;
+    for(int i = 0;i < 10; i++){
+        flag=0;
+        for(int j = 0;j < 10; j++){
+            //compara lista velha com a nova
+            if(strcmp(listaPromotoresAux[i],listaPromotores[j]) == 0){
+                //printf("Existe o promotor %s na lista",listaPromotores[i]);
+                flag = 1;//promotor existe
+            }
+        }
+        if (flag==0){
+            printf("O promotor[%s] nao existe no novo ficheiro.A eliminar...\n",listaPromotores[i]);
+            //existia na velha, nao existe na nova->matar.
+            paraPromotor(listaPromotoresAux[i]);
+        }
+    }
+
 }
 
 //Funcao que vai informar todos os clientes que o sevidor foi enceraado
@@ -427,19 +513,19 @@ void pedeComando(char *str,int numArgumento ){
         if (numArgumento != 1)
             printf("Nao Valido\n");
         else
-            printf("Valido\n");
+            listaPAtivos();
     } else if (strcmp(token,"reprom") == 0) {  ///Feito
         if (numArgumento != 1)
             printf("Nao Valido\n");
         else
-            printf("Valido\n");
+            reprom(getenv("FPROMOTERS"));
     } else if (strcmp(token,"cancel") == 0) { ///
         if (numArgumento != 2)
             printf("Nao Valido\n");
         else {
             token = strtok(NULL, " ");
-            printf("Nome do executavel: %s\n", token);
-            printf("Valido\n");
+            //printf("Nome do executavel: %s\n", token);
+            paraPromotor(token);
         }
     } else if (strcmp(token,"close") == 0) {
         if (numArgumento != 1)
@@ -451,7 +537,7 @@ void pedeComando(char *str,int numArgumento ){
         if (numArgumento != 1)
             printf("Nao Valido\n");
         else {
-            executaPromotores(getenv("FPROMOTERS"));
+            //executaPromotores(getenv("FPROMOTERS"));
         }
     } else if(strcmp(token,"utilizadores") == 0){
         if (numArgumento != 1)
@@ -541,13 +627,42 @@ void *temporizador(void *dados){
     pthread_exit(NULL);
 }
 
+void *trata_promos(void *dados){
+    TDATA *pd = dados;
+    //TODO:Guardar o tempo e para ser inicializado depois
+    do{
+        //pthread_mutex_lock(pd->ptrinco);
+        Promocao prom;
+        int count = 0;
+        do {
+            if (count == pd->numProm && strcmp(listaPromotores[count],"-") != 0 ) {
+                pthread_mutex_lock(pd->ptrinco);
+                printf("\n%s\n",listaPromotores[count]);
+                prom = lancaPromotor(listaPromotores[count]);
+                pthread_mutex_unlock(pd->ptrinco);
+                printf("Promotor: %s\n", listaPromotores[count]);
+                printf("Categoria: %s\n", prom.categoria);
+                printf("Desconto: %d\n", prom.desconto);
+                printf("Duracao: %d\n\n", prom.duracao);
+
+            }
+            count++;
+        }while (count < 10);
+
+    }while(pd->continua);
+
+    pthread_exit(NULL);
+}
+
+
 int main(int argc,char *argv[],char *envp[]) {
     printf("Bem vindo Administrador\n");char str[128];
+    preencheLista(getenv("FPROMOTERS"));
     Comando a;
     fd_set fds;
     pthread_mutex_t trinco;
-    pthread_t tid;
-    TDATA data;
+    //pthread_t tid[11];
+    TDATA data[11]; //1+10 timer + até 10 promotores
     //de n em n segundos
     struct sigaction sa;
     sa.sa_sigaction = handle_sig;
@@ -584,10 +699,32 @@ int main(int argc,char *argv[],char *envp[]) {
     }
 
     pthread_mutex_init(&trinco,NULL);
-    //T1
-    data.continua = 1;
-    data.ptrinco = &trinco;
-    pthread_create(&tid,NULL, temporizador,&data);
+    //T1->temporizador
+    data[0].continua = 1;
+    data[0].ptrinco = &trinco;
+    pthread_create(&tid[0],NULL, temporizador,&data[0]);
+    //T2->promotores
+    /*
+    data[1].continua = 1;
+    data[1].ptrinco = &trinco;
+    pthread_create(&tid[1],NULL, trata_promos,&data[1]);
+    */
+    FILE *f;
+    f= fopen(getenv("FPROMOTERS"),"rt");
+    if(f == NULL) {
+        printf("Erro ao abrir o ficheiro");
+        exit(1);
+    }
+
+    for(int i=1;i < 10 + 1 ; i++){
+        data[i].continua = 1;
+        data[i].ptrinco = &trinco;
+        data[i].numProm = i - 1;
+        pthread_create(&tid[i],NULL, trata_promos,&data[i]);
+        //printf("Id da thread %d -> %d",i,tid[i]);
+
+    }
+
 
 
 
@@ -608,76 +745,80 @@ int main(int argc,char *argv[],char *envp[]) {
 
             pedeComando(str,numArgumento);
         }else if (res >0 && FD_ISSET(fdRecebe,&fds)) {
-             ///Le a informacao do cliente
-             int size = read(fdRecebe, &a, sizeof(Comando));
-             if (size > 0) {
-                 if(a.comando == 0){//Verificar login
-                     //printf("[BACKEND] Recebi do frontend %d:%s %s\n", a.user.pid, a.user.nome, a.user.password);
-                     sprintf(CLIENT_FIFO_FINAL, FIFO_CLIENTE, a.user.pid);
-                     ///Tratar info
-                     Resposta resposta;
-                     loadUsersFile(getenv("FUSERS"));
-                     resposta.comando = 1;
-                     int aux = isUserValid(a.user.nome, a.user.password);
-                     if (aux == -1) {
-                         resposta.num = 0;
-                         fprintf(stderr, "Erro(funcao isUserValid)!");
-                         exit(1);
-                     } else if (aux == 0) {
-                         resposta.num = 0;
-                         printf("Utilizador nao existe ou password errada!\n");
-                     } else {
-                         resposta.num = 1;
-                         adicionaUserLista(a.user);
-                         printLista();
-                     }
-                     ///Enviar resposta ao cliente
-                     resposta.pid = getpid();
-                     int fdEnvio = open(CLIENT_FIFO_FINAL, O_WRONLY);
-                     int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
-                     if (size2 == -1) {
-                         fprintf(stderr, "Erro a escrever");
-                         exit(1);
-                     }
-                     close(fdEnvio);
-                 } else if(a.comando==1){//colocar item á venda
-                     //printf("Recebi um item crl!\n");
-                     printf("Recebi um %s do utilizador %s\n",a.item.nome,a.item.usernameVendedor);
-                     addItemToFich(getenv("FITEMS"),a.item);
+            ///Le a informacao do cliente
+            int size = read(fdRecebe, &a, sizeof(Comando));
+            if (size > 0) {
+                if(a.comando == 0){//Verificar login
+                    //printf("[BACKEND] Recebi do frontend %d:%s %s\n", a.user.pid, a.user.nome, a.user.password);
+                    sprintf(CLIENT_FIFO_FINAL, FIFO_CLIENTE, a.user.pid);
+                    ///Tratar info
+                    Resposta resposta;
+                    loadUsersFile(getenv("FUSERS"));
+                    resposta.comando = 1;
+                    int aux = isUserValid(a.user.nome, a.user.password);
+                    if (aux == -1) {
+                        resposta.num = 0;
+                        fprintf(stderr, "Erro(funcao isUserValid)!");
+                        exit(1);
+                    } else if (aux == 0) {
+                        resposta.num = 0;
+                        printf("Utilizador nao existe ou password errada!\n");
+                    } else {
+                        resposta.num = 1;
+                        adicionaUserLista(a.user);
+                        printLista();
+                    }
+                    ///Enviar resposta ao cliente
+                    resposta.pid = getpid();
+                    int fdEnvio = open(CLIENT_FIFO_FINAL, O_WRONLY);
+                    int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
+                    if (size2 == -1) {
+                        fprintf(stderr, "Erro a escrever");
+                        exit(1);
+                    }
+                    close(fdEnvio);
+                } else if(a.comando==1){//colocar item á venda
+                    //printf("Recebi um item crl!\n");
+                    printf("Recebi um %s do utilizador %s\n",a.item.nome,a.item.usernameVendedor);
+                    addItemToFich(getenv("FITEMS"),a.item);
 
-                 }else if(a.comando == 2) {
-                     list(getenv("FITEMS"));
-                     //enviar resposta com resposta.comando = 2;
-                 }else if(a.comando == 3){
-                     listCat(getenv("FITEMS"),a.item.categoria);
-                 }else if(a.comando == 4) {
-                     listSel(getenv("FITEMS"), a.item.usernameVendedor);
-                 }else if(a.comando == 5){
-                     listVal(getenv("FITEMS"), a.item.valAtual);
-                 }else if(a.comando == 6){
-                     listTemp(getenv("FITEMS"), a.item.duracao);
-                 }else if(a.comando == 7){
-                     devolveHora();
-                 }else if(a.comando == 8){
-                     fazLicitacao(getenv("FITEMS"),a.user.nome,a.item.id,a.item.valAtual);
-                 }else if(a.comando == 9){
-                        consultaSaldo(a.user.nome);
-                 }else if(a.comando == 10){
-                        adicionaSaldo(a.user.nome,a.item.valAtual);
-                 }
+                }else if(a.comando == 2) {
+                    list(getenv("FITEMS"));
+                    //enviar resposta com resposta.comando = 2;
+                }else if(a.comando == 3){
+                    listCat(getenv("FITEMS"),a.item.categoria);
+                }else if(a.comando == 4) {
+                    listSel(getenv("FITEMS"), a.item.usernameVendedor);
+                }else if(a.comando == 5){
+                    listVal(getenv("FITEMS"), a.item.valAtual);
+                }else if(a.comando == 6){
+                    listTemp(getenv("FITEMS"), a.item.duracao);
+                }else if(a.comando == 7){
+                    devolveHora();
+                }else if(a.comando == 8){
+                    fazLicitacao(getenv("FITEMS"),a.user.nome,a.item.id,a.item.valAtual);
+                }else if(a.comando == 9){
+                    consultaSaldo(a.user.nome);
+                }else if(a.comando == 10){
+                    adicionaSaldo(a.user.nome,a.item.valAtual);
+                }
 
 
 
-             } else {
-                 fprintf(stderr,"Erro na leitura");
-                 exit(1);
-             }
+            } else {
+                fprintf(stderr,"Erro na leitura");
+                exit(1);
+            }
         }
     } while (strcmp(str,"close")!=0);
 
-    data.continua=0;
-    pthread_join(tid,NULL);
+    data[0].continua=0;
+    pthread_join(tid[0],NULL);
 
+    for(int i=1;i<10+1;i++){
+        data[i].continua=0;
+        pthread_join(tid[i],NULL);
+    }
 
     pthread_mutex_destroy(&trinco);
     close(fdRecebe);

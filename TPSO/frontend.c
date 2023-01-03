@@ -8,6 +8,7 @@ char CLIENT_FIFO_FINAL[100];
 int servPid=-1;
 char nome[32];
 int id=1;
+pid_t pid;
 
 typedef struct {
     int continua;
@@ -23,6 +24,7 @@ void colocaLeilao(char *nome,Item a){
     }
     Comando comando;
     comando.item=a;
+    comando.user.pid = pid;
     comando.comando=1;//enviar um item
 
     int size = write(fdEnvia, &comando, sizeof(Comando));
@@ -36,7 +38,7 @@ void list(){
         printf("Erro ao abrir o fifo");
     }
     Comando comando;
-    comando.pid = getpid();
+    comando.user.pid = pid;
     comando.comando=2;//lista todos os itens
     int size = write(fdEnvia, &comando, sizeof(Comando));
     close(fdEnvia);
@@ -49,6 +51,7 @@ void listCat(char *categoria){
         printf("Erro ao abrir o fifo");
     }
     Comando comando;
+    comando.user.pid = pid;
     strcpy(comando.item.categoria,categoria);
     comando.comando=3;//lista todos os itens de uma categoria
     int size = write(fdEnvia, &comando, sizeof(Comando));
@@ -62,6 +65,7 @@ void listVen(char *vendedor){
         printf("Erro ao abrir o fifo");
     }
     Comando comando;
+    comando.user.pid = pid;
     strcpy(comando.item.usernameVendedor,vendedor);
     comando.comando=4;//lista todos os itens de uma categoria
     int size = write(fdEnvia, &comando, sizeof(Comando));
@@ -75,6 +79,7 @@ void listVal(int val){
         printf("Erro ao abrir o fifo");
     }
     Comando comando;
+    comando.user.pid = pid;
     comando.item.valAtual=val;
     comando.comando=5;//lista todos os itens de uma categoria
     int size = write(fdEnvia, &comando, sizeof(Comando));
@@ -87,6 +92,7 @@ void listTemp(int tempo){
         printf("Erro ao abrir o fifo");
     }
     Comando comando;
+    comando.user.pid = pid;
     comando.item.duracao=tempo;
     comando.comando=6;//lista todos os itens de uma categoria
     int size = write(fdEnvia, &comando, sizeof(Comando));
@@ -100,6 +106,7 @@ void pedeHora(){
         printf("Erro ao abrir o fifo");
     }
     Comando comando;
+    comando.user.pid = pid;
     comando.comando=7;//lista todos os itens de uma categoria
     int size = write(fdEnvia, &comando, sizeof(Comando));
     close(fdEnvia);
@@ -114,6 +121,7 @@ void licita(int id,int valor){
         printf("Erro ao abrir o fifo");
     }
     Comando comando;
+    comando.user.pid = pid;
     comando.item.id = id;
     comando.item.valAtual = valor;
     comando.comando=8;//enviar um item
@@ -129,6 +137,7 @@ void pedeSaldo(char *nome){
         printf("Erro ao abrir o fifo");
     }
     Comando comando;
+    comando.user.pid = pid;
     strcpy(comando.user.nome,nome);
     comando.comando=9;//lista todos os itens de uma categoria
     int size = write(fdEnvia, &comando, sizeof(Comando));
@@ -142,6 +151,7 @@ void addSaldo(int saldo){
         printf("Erro ao abrir o fifo");
     }
     Comando comando;
+    comando.user.pid = pid;
     comando.item.valAtual = saldo;
     strcpy(comando.user.nome,nome);
     comando.comando=10;//lista todos os itens de uma categoria
@@ -361,6 +371,7 @@ char* pedeComandos(){
         a.user.pid = getpid();
         a.comando= 0;//validacao
         strcpy(nome,argv[1]);
+        pid = getpid();
 
         pthread_mutex_t trinco;
         pthread_t tid;
@@ -373,7 +384,8 @@ char* pedeComandos(){
         }
 
         sprintf(CLIENT_FIFO_FINAL, FIFO_CLIENTE, getpid());
-        //sprintf(CLIENT_FIFO_FINAL, "/tmp/fifo_%d", getpid());
+        //pid = getpid();
+
         if(mkfifo(CLIENT_FIFO_FINAL,0666) == -1){
             if(errno == EEXIST){
                 printf("Fifo já está a correr");

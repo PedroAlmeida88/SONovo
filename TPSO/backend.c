@@ -15,6 +15,23 @@ typedef struct {
     pthread_mutex_t *ptrinco;
 }TDATA;
 
+void informaClienteFim(){
+    for(int i=0;i<20;i++){
+        if(ListaClientes[i].pid != -1){
+            //enviar para todos
+            union sigval info;
+            sigqueue(ListaClientes[i].pid,SIGUSR1,info);
+        }
+    }
+}
+
+void funcSair(){
+    printf("\nA encerrar o servidor...\n");
+    informaClienteFim();
+    unlink(FIFO_SERVIDOR);
+    exit(1);
+}
+
 void preencheLista(char * filename){
     FILE *f;Promocao prom;
     char nomePromotor[50];
@@ -48,12 +65,14 @@ void mostraLista(){
 void listProdutos(char *filename){
     Item item;
     FILE *f;
+    int i;
     f = fopen(filename,"rt");
     if(f == NULL){
         fprintf(stderr,"Ficheiro nao encontrado\n");
+        funcSair();
         return;
     }else{
-        fscanf(f,"%d",&tempo);
+        fscanf(f,"%d",&i);
         while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
             printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
         }
@@ -63,23 +82,27 @@ void listProdutos(char *filename){
 void list(char *filename){
     Item item;
     FILE *f;
+    int i;
     Resposta resposta;
     f = fopen(filename,"rt");
     if(f == NULL){
         fprintf(stderr,"Ficheiro nao encontrado\n");
+        funcSair();
         return;
     }else{
-        fscanf(f,"%d",&tempo);
+        fscanf(f,"%d",&i);
         while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
             //printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
             resposta.pid = getpid();
             resposta.item = item;
             resposta.comando = 2;
             int fdEnvio = open(CLIENT_FIFO_FINAL, O_WRONLY);
+            printf("Nome do fifo %s\n",CLIENT_FIFO_FINAL);
             int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
             if (size2 == -1) {
+                printf("Nome do fifo %s\n",CLIENT_FIFO_FINAL );
                 fprintf(stderr, "Erro a escrever");
-                exit(1);
+                funcSair();
             }
             close(fdEnvio);
         }
@@ -91,12 +114,14 @@ void listCat(char *filename,char *categoria){
     Item item;
     FILE *f;
     Resposta resposta;
+    int i;
     f = fopen(filename,"rt");
     if(f == NULL){
         fprintf(stderr,"Ficheiro nao encontrado\n");
+        funcSair();
         return;
     }else{
-        fscanf(f,"%d",&tempo);
+        fscanf(f,"%d",&i);
         while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
             //printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
             if(strcmp(categoria,item.categoria) == 0) {
@@ -107,7 +132,7 @@ void listCat(char *filename,char *categoria){
                 int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
                 if (size2 == -1) {
                     fprintf(stderr, "Erro a escrever");
-                    exit(1);
+                    funcSair();
                 }
                 close(fdEnvio);
             }
@@ -119,13 +144,14 @@ void listCat(char *filename,char *categoria){
 void listSel(char *filename,char *vendedor){
     Item item;
     FILE *f;
+    int i;
     Resposta resposta;
     f = fopen(filename,"rt");
     if(f == NULL){
         fprintf(stderr,"Ficheiro nao encontrado\n");
         return;
     }else{
-        fscanf(f,"%d",&tempo);
+        fscanf(f,"%d",&i);
         while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
             //printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
             if(strcmp(vendedor,item.usernameVendedor) == 0) {
@@ -136,7 +162,7 @@ void listSel(char *filename,char *vendedor){
                 int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
                 if (size2 == -1) {
                     fprintf(stderr, "Erro a escrever");
-                    exit(1);
+                    funcSair();
                 }
                 close(fdEnvio);
             }
@@ -148,13 +174,14 @@ void listSel(char *filename,char *vendedor){
 void listVal(char *filename,int val){
     Item item;
     FILE *f;
+    int i;
     Resposta resposta;
     f = fopen(filename,"rt");
     if(f == NULL){
         fprintf(stderr,"Ficheiro nao encontrado\n");
         return;
     }else{
-        fscanf(f,"%d",&tempo);
+        fscanf(f,"%d",&i);
         while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
             //printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
             if(item.valAtual <= val) {
@@ -165,7 +192,7 @@ void listVal(char *filename,int val){
                 int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
                 if (size2 == -1) {
                     fprintf(stderr, "Erro a escrever");
-                    exit(1);
+                    funcSair();
                 }
                 close(fdEnvio);
             }
@@ -176,6 +203,7 @@ void listVal(char *filename,int val){
 
 void listTemp(char *filename,int val){
     Item item;
+    int i;
     FILE *f;
     Resposta resposta;
     f = fopen(filename,"rt");
@@ -183,8 +211,8 @@ void listTemp(char *filename,int val){
         fprintf(stderr,"Ficheiro nao encontrado\n");
         return;
     }else{
-        fscanf(f,"%d",&tempo);
         while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
+            fscanf(f,"%d",&i);
             if(item.duracao <= val) {
                 //printf("Valor %d\n",val);
                 //printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
@@ -196,7 +224,7 @@ void listTemp(char *filename,int val){
                 int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
                 if (size2 == -1) {
                     fprintf(stderr, "Erro a escrever");
-                    exit(1);
+                    funcSair();
                 }
                 close(fdEnvio);
             }
@@ -214,7 +242,7 @@ void devolveHora(){
     int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
     if (size2 == -1) {
         fprintf(stderr, "Erro a escrever");
-        exit(1);
+        funcSair();
     }
     close(fdEnvio);
 }
@@ -230,7 +258,7 @@ void consultaSaldo(char *nome){
     int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
     if (size2 == -1) {
         fprintf(stderr, "Erro a escrever");
-        exit(1);
+        funcSair();
     }
     close(fdEnvio);
 }
@@ -247,7 +275,7 @@ void adicionaSaldo(char *nome,int valor){
     int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
     if (size2 == -1) {
         fprintf(stderr, "Erro a escrever");
-        exit(1);
+        funcSair();
     }
     close(fdEnvio);
 }
@@ -270,13 +298,14 @@ void addItemToFich(char *filename,Item item){
     int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
     if (size2 == -1) {
         fprintf(stderr, "Erro a escrever");
-        exit(1);
+        funcSair();
     }
     close(fdEnvio);
 }
 
 void fazLicitacao(char *filename,char *nome,int id, int valor){
     Item item;
+    int i,nLinha=2;
     FILE *f;
     Resposta resposta;
     f = fopen(filename,"a+");
@@ -285,26 +314,33 @@ void fazLicitacao(char *filename,char *nome,int id, int valor){
         fprintf(stderr,"Ficheiro nao encontrado\n");
         return;
     }else{
-        fscanf(f,"%d",&tempo);
+        fscanf(f,"%d",&i);
         while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
             if(item.id == id) {
                 flag=1;
                 loadUsersFile(getenv("FUSERS"));
                 if (valor < item.valAtual) {//ver se tem dinheiro
-                    strcpy(resposta.item.categoria,"Valor inferoir ao atual!");
+                    strcpy(resposta.item.categoria,"Valor inferior ao atual!");
                 } else if (valor > getUserBalance(nome)) {//ver se o utilizador tem saldo suficiente
                     strcpy(resposta.item.categoria,"Dinheiro insuficiente na conta");
-                } else{
+                } else if(valor >= item.valCompreJa){
+                    strcpy(resposta.item.categoria,"Item adquirido!");
+                    //remover linha do ficheiro
+                    deleteLineFromFile(filename,nLinha);
+                    //retirar o dinheiro da conta do utilizador
+                    updateUserBalance(nome,getUserBalance("TESTE")-item.valCompreJa);
+                }else{
                     strcpy(resposta.item.categoria,"Licitacao efetuada!");
                     //updateUserBalance(nome,getUserBalance("TESTE")-valor);///Tiro o valor ja ou so se comprar?
-                    //Substituir o item antigo pelo item atualizado
+                    //Atualizar o item antigo pelo item atualizado
                     item.valAtual = valor;
                     strcpy(item.usernameLicitador,nome);
-                    //fprintf(f,"%d %s %s %d %d %d %s %s",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
+                    //Substituir o item antigo pelo item atualizado
+                    modifyLineInFile(filename,nLinha,item);
                 }
                 saveUsersFile(getenv("FUSERS"));
             }
-
+            nLinha++;
         }
     }
     fclose(f);
@@ -315,7 +351,7 @@ void fazLicitacao(char *filename,char *nome,int id, int valor){
     int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
     if (size2 == -1) {
         fprintf(stderr, "Erro a escrever");
-        exit(1);
+        funcSair();
     }
     close(fdEnvio);
 
@@ -324,12 +360,14 @@ void fazLicitacao(char *filename,char *nome,int id, int valor){
 void getId(char *filename){
     Item item;
     FILE *f;
+    int i;
     f = fopen(filename,"rt");
     if(f == NULL){
         fprintf(stderr,"Ficheiro nao encontrado\n");
+        funcSair();
         return;
     }else{
-        fscanf(f,"%d",&tempo);
+        fscanf(f,"%d",&i);
         while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
             //printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
             //TODO:Tratar informacao
@@ -340,12 +378,12 @@ void getId(char *filename){
 }
 
 void leFichItens(char *filename) {
-    int res, fd;
     Item item;
     FILE *f;
     f = fopen(filename,"rt");
     if(f == NULL){
         fprintf(stderr,"Ficheiro nao encontrado\n");
+        funcSair();
         return;
     }else{
         fscanf(f,"%d",&tempo);
@@ -355,6 +393,24 @@ void leFichItens(char *filename) {
         }
     }
     fclose(f);
+}
+
+void gravaTempo(char *filename){
+    printf("[Fazer] Atualizar o tempo...\n");
+/*    FILE *f;
+    f = fopen(filename,"wt");
+
+
+    if(f == NULL){
+        fprintf(stderr,"Ficheiro nao encontrado\n");
+        funcSair();
+        return;
+    }else{
+        //atualiza a primeira linha do ficheiro
+        printf("[Fazer] Atualizar o tempo...\n");
+    }
+    fclose(f);
+*/
 }
 
 void initLista(){
@@ -460,15 +516,7 @@ void reprom(char *filename){
 }
 
 //Funcao que vai informar todos os clientes que o sevidor foi enceraado
-void informaClienteFim(){
-    for(int i=0;i<20;i++){
-        if(ListaClientes[i].pid != -1){
-            //enviar para todos
-            union sigval info;
-            sigqueue(ListaClientes[i].pid,SIGUSR1,info);
-        }
-    }
-}
+
 
 void kickUser(char nome[]){
     int flag = 0,index=-1;//ativa se existir o utilizador
@@ -532,6 +580,7 @@ void pedeComando(char *str,int numArgumento ){
             printf("Nao Valido\n");
         else {
             informaClienteFim();
+            gravaTempo(getenv("FITEMS"));
         }
     } else if(strcmp(token,"promotores") == 0){
         if (numArgumento != 1)
@@ -559,11 +608,11 @@ Promocao lancaPromotor(char *nomePromotor) {
     int res,canal[2],bytes=0,desconto,duracao;
     if(pipe(canal) == -1){
         fprintf(stderr,"Erro ao criar o pipe");
-        exit(1);
+        funcSair();
     }
     res = fork();
     if(res == -1)
-        exit(1);
+        funcSair();
     if(res == 0){ //Processo filho
         close(1);           //redirecionamento
         dup(canal[1]);
@@ -577,7 +626,7 @@ Promocao lancaPromotor(char *nomePromotor) {
         bytes = read(canal[0],frase, sizeof (frase));
         if(bytes == -1){
             fprintf(stderr,"Erro na leitura");
-            exit(1);
+            funcSair();
         }
         sscanf(frase,"%s %d %d",categoria,&desconto,&duracao);
         strcpy(prom.categoria,categoria);
@@ -596,12 +645,7 @@ Promocao lancaPromotor(char *nomePromotor) {
     return prom;
 }
 
-void funcSinalSair(){
-    printf("\nA encerrar o servidor...\n");
-    informaClienteFim();
-    unlink(FIFO_SERVIDOR);
-    exit(1);
-}
+
 
 void handle_sig(int sig,siginfo_t *info,void *old){
     if(sig==SIGUSR1) {
@@ -621,7 +665,7 @@ void *temporizador(void *dados){
         sleep(1);//relogio do servidor(avancar um segundo)-decrementer um segundo ao leilao ativo;ter um int hora sempre a incrementar->fazer com o sleep
         pthread_mutex_lock(pd->ptrinco);
         tempo++;
-        //printf("Tempo %ds\n", tempo);
+        printf("Tempo %ds\n", tempo);
         pthread_mutex_unlock(pd->ptrinco);
     }while(pd->continua);
     pthread_exit(NULL);
@@ -656,7 +700,7 @@ void *trata_promos(void *dados){
 
 
 int main(int argc,char *argv[],char *envp[]) {
-    printf("Bem vindo Administrador\n");char str[128];
+    char str[128];
     preencheLista(getenv("FPROMOTERS"));
     Comando a;
     fd_set fds;
@@ -677,7 +721,7 @@ int main(int argc,char *argv[],char *envp[]) {
 
     //sinal(quando o backend termina á força (ctrl + c))
     struct sigaction sa3;
-    sa3.sa_sigaction = funcSinalSair;
+    sa3.sa_sigaction = funcSair;
     sa3.sa_flags = SA_SIGINFO;
     sigaction(SIGINT,&sa3,NULL);
 
@@ -690,12 +734,13 @@ int main(int argc,char *argv[],char *envp[]) {
             printf("Servidor em execução ou fifo ja existe");
         }
         printf("Erro abrir fifo");
-        exit(1);
+        funcSair();
     }
+    printf("Bem vindo Administrador\n");
     int fdRecebe = open(FIFO_SERVIDOR, O_RDWR);
     if(fdRecebe == -1){
         printf("Erro ao abrir o fifo");
-        exit(1);
+        funcSair();
     }
 
     pthread_mutex_init(&trinco,NULL);
@@ -713,9 +758,10 @@ int main(int argc,char *argv[],char *envp[]) {
     f= fopen(getenv("FPROMOTERS"),"rt");
     if(f == NULL) {
         printf("Erro ao abrir o ficheiro");
-        exit(1);
+        funcSair();
     }
 
+/*
     for(int i=1;i < 10 + 1 ; i++){
         data[i].continua = 1;
         data[i].ptrinco = &trinco;
@@ -724,9 +770,7 @@ int main(int argc,char *argv[],char *envp[]) {
         //printf("Id da thread %d -> %d",i,tid[i]);
 
     }
-
-
-
+*/
 
     do{
         //T0
@@ -747,10 +791,10 @@ int main(int argc,char *argv[],char *envp[]) {
         }else if (res >0 && FD_ISSET(fdRecebe,&fds)) {
             ///Le a informacao do cliente
             int size = read(fdRecebe, &a, sizeof(Comando));
+            sprintf(CLIENT_FIFO_FINAL, FIFO_CLIENTE, a.user.pid);
             if (size > 0) {
                 if(a.comando == 0){//Verificar login
-                    //printf("[BACKEND] Recebi do frontend %d:%s %s\n", a.user.pid, a.user.nome, a.user.password);
-                    sprintf(CLIENT_FIFO_FINAL, FIFO_CLIENTE, a.user.pid);
+                    printf("User pid1 %d",a.user.pid);
                     ///Tratar info
                     Resposta resposta;
                     loadUsersFile(getenv("FUSERS"));
@@ -759,7 +803,7 @@ int main(int argc,char *argv[],char *envp[]) {
                     if (aux == -1) {
                         resposta.num = 0;
                         fprintf(stderr, "Erro(funcao isUserValid)!");
-                        exit(1);
+                        funcSair();
                     } else if (aux == 0) {
                         resposta.num = 0;
                         printf("Utilizador nao existe ou password errada!\n");
@@ -771,20 +815,19 @@ int main(int argc,char *argv[],char *envp[]) {
                     ///Enviar resposta ao cliente
                     resposta.pid = getpid();
                     int fdEnvio = open(CLIENT_FIFO_FINAL, O_WRONLY);
+                    //printf("NOmde do fifo1 %s\n",CLIENT_FIFO_FINAL);
                     int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
                     if (size2 == -1) {
                         fprintf(stderr, "Erro a escrever");
-                        exit(1);
+                        funcSair();
                     }
                     close(fdEnvio);
                 } else if(a.comando==1){//colocar item á venda
-                    //printf("Recebi um item crl!\n");
                     printf("Recebi um %s do utilizador %s\n",a.item.nome,a.item.usernameVendedor);
                     addItemToFich(getenv("FITEMS"),a.item);
 
                 }else if(a.comando == 2) {
                     list(getenv("FITEMS"));
-                    //enviar resposta com resposta.comando = 2;
                 }else if(a.comando == 3){
                     listCat(getenv("FITEMS"),a.item.categoria);
                 }else if(a.comando == 4) {
@@ -807,19 +850,20 @@ int main(int argc,char *argv[],char *envp[]) {
 
             } else {
                 fprintf(stderr,"Erro na leitura");
-                exit(1);
+                funcSair();
             }
         }
     } while (strcmp(str,"close")!=0);
 
     data[0].continua=0;
+    pthread_cancel(tid[0]);
     pthread_join(tid[0],NULL);
-
+/*
     for(int i=1;i<10+1;i++){
         data[i].continua=0;
         pthread_join(tid[i],NULL);
     }
-
+*/
     pthread_mutex_destroy(&trinco);
     close(fdRecebe);
     unlink(FIFO_SERVIDOR);

@@ -5,8 +5,10 @@ char CLIENT_FIFO_FINAL[100];
 User ListaClientes[20];
 int nUsers=0;
 int tempo=0;
+int tempoInicial;
 int id=1;
 char listaPromotores[10][50];
+int listaItems[30][2];//pode 30 id e 30 duracoes
 pthread_t tid[11];
 
 typedef struct {
@@ -60,6 +62,80 @@ void mostraLista(){
     for(int i = 0;i<10;i++){
         printf("Promotor num %d: %s\n",i+1,listaPromotores[i]);
     }
+}
+
+
+
+void preencheListaItems(char *filename){
+    Item item;
+    FILE *f;
+    int i=0,temp;
+    //limpar lista
+    for(int i = 0;i<30;i++)
+        for(int j = 0;j<2;j++)
+            listaItems[i][j]=0;
+
+    f = fopen(filename,"rt");
+    if(f == NULL){
+        fprintf(stderr,"Ficheiro nao encontrado\n");
+        funcSair();
+        return;
+    }else{
+        fscanf(f,"%d",&temp);
+        while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
+            listaItems[i][0] = item.id;
+            listaItems[i][1] = item.duracao + tempoInicial;
+            i++;
+        }
+    }
+    fclose(f);
+}
+
+void mostraListaItens(){
+    for(int i = 0;i<30;i++)
+        if(listaItems[i][0] != 0)
+            printf("Linha %d-> %d | %d\n",i+1,listaItems[i][0],listaItems[i][1]);
+}
+
+void verificaDuracao(){
+    for(int i = 0;i<30 ; i++)
+        if(listaItems[i][0] != 0){
+            if(listaItems[i][1] <= tempo){
+                //se tiver licitador retirar o item e reirar o dinheiro da conta
+                Item item;
+                FILE *f;
+                int tem,count;
+                f = fopen(getenv("FITEMS"),"rt");
+                if(f == NULL){
+                    fprintf(stderr,"Ficheiro nao encontrado\n");
+                    funcSair();
+                    return;
+                }else{
+                    count = 2;
+                    fscanf(f,"%d",&tem);
+                    while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
+                        if(listaItems[i][0] == item.id){
+                            //se tiver licitador retirar o item e reirar o dinheiro da conta
+                            if(strcmp(item.usernameLicitador,"-") == 0){//n tem licitador
+                                printf("O item %s de id %d foi devolvido ao cliente %s\n",item.nome,item.id,item.usernameVendedor);
+                            }else{//tem licitador
+                                printf("O item %s de id %d foi vendido ao cliente %s\n",item.nome,item.id,item.usernameLicitador);
+                                loadUsersFile(getenv("FUSERS"));
+                                updateUserBalance(item.usernameLicitador, getUserBalance(item.usernameLicitador)- item.valAtual);
+                                saveUsersFile(getenv("FUSERS"));
+                            }
+                            deleteLineFromFile(getenv("FITEMS"),count);
+                            preencheListaItems(getenv("FITEMS"));
+                            mostraListaItens();
+
+                        }
+                        count++;
+                    }
+                }
+                fclose(f);
+
+            }
+        }
 }
 
 void listProdutos(char *filename){
@@ -380,6 +456,7 @@ void getId(char *filename){
 void leFichItens(char *filename) {
     Item item;
     FILE *f;
+    int i;
     f = fopen(filename,"rt");
     if(f == NULL){
         fprintf(stderr,"Ficheiro nao encontrado\n");
@@ -389,7 +466,6 @@ void leFichItens(char *filename) {
         fscanf(f,"%d",&tempo);
         while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
             //printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
-            //TODO:Tratar informacao
         }
     }
     fclose(f);
@@ -667,6 +743,7 @@ void *temporizador(void *dados){
         tempo++;
         printf("Tempo %ds\n", tempo);
         pthread_mutex_unlock(pd->ptrinco);
+        verificaDuracao();
     }while(pd->continua);
     pthread_exit(NULL);
 }
@@ -698,10 +775,21 @@ void *trata_promos(void *dados){
     pthread_exit(NULL);
 }
 
+void init(){
+    initLista();
+    leFichItens(getenv("FITEMS"));
+    tempoInicial = tempo;
+    getId(getenv("FITEMS"));//deixa o id com o valor correto
+    preencheLista(getenv("FPROMOTERS"));
+    preencheListaItems(getenv("FITEMS"));
+    mostraListaItens();
+
+}
+
 
 int main(int argc,char *argv[],char *envp[]) {
     char str[128];
-    preencheLista(getenv("FPROMOTERS"));
+    init();
     Comando a;
     fd_set fds;
     pthread_mutex_t trinco;
@@ -725,9 +813,7 @@ int main(int argc,char *argv[],char *envp[]) {
     sa3.sa_flags = SA_SIGINFO;
     sigaction(SIGINT,&sa3,NULL);
 
-    initLista();
-    leFichItens(getenv("FITEMS"));
-    getId(getenv("FITEMS"));//deixa o id com o valor correto
+
     //TODO:ACCESS
     if(mkfifo(FIFO_SERVIDOR, 0666) == -1){
         if(errno == EEXIST){

@@ -132,14 +132,15 @@ void licita(int id,int valor){
 }
 
 void pedeSaldo(char *nome){
-    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
-    if(fdEnvia == -1){
-        printf("Erro ao abrir o fifo");
-    }
+
     Comando comando;
     comando.user.pid = pid;
     strcpy(comando.user.nome,nome);
     comando.comando=9;//lista todos os itens de uma categoria
+    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
+    if(fdEnvia == -1){
+        printf("Erro ao abrir o fifo");
+    }
     int size = write(fdEnvia, &comando, sizeof(Comando));
     close(fdEnvia);
 
@@ -290,7 +291,7 @@ char* pedeComandos(){
         struct sigaction sa;
         info.sival_int = getpid();  //enviar o PID ao backend
         sigqueue(servPid,SIGUSR1,info);
-        alarm(5);
+        alarm(atoi(getenv("HEARTBEAT")));
     }
 
     void handle_sig_servidorEncerrou(){
@@ -317,13 +318,16 @@ char* pedeComandos(){
         Resposta resposta;
         do{
             ///Le a informacao do cliente
-            pthread_mutex_lock(pd->ptrinco);
+            //pthread_mutex_lock(pd->ptrinco);
             int size2 = read(pd->fdResposta, &resposta, sizeof(Resposta));
-            pthread_mutex_unlock(pd->ptrinco);
+            //pthread_mutex_unlock(pd->ptrinco);
             if(size2 > 0){
                 if(resposta.comando == 1){
                     if(resposta.num == 1){
                         printf("Bem vindo %s!\n",nome);
+                        pthread_mutex_lock(pd->ptrinco);
+                        servPid = resposta.pid;
+                        pthread_mutex_unlock(pd->ptrinco);
                     }else{
                         printf("Utilizador desconecido ou password errada!\n");
                         exit(1);
@@ -434,15 +438,14 @@ char* pedeComandos(){
         sa2.sa_sigaction = funcSinalSair;
         sa2.sa_flags = SA_SIGINFO;
         sigaction(SIGINT,&sa2,NULL);
-        servPid = resposta.pid;
 
 
         struct sigaction saAlarm;
         saAlarm.sa_handler = handle_alarm;
         saAlarm.sa_flags = SA_RESTART | SA_SIGINFO;
         sigaction(SIGALRM,&saAlarm,NULL);
-        //TODO:alarm(atoi(getenv("HEARTBEAT")));
-        alarm(5);
+        alarm(atoi(getenv("HEARTBEAT")));
+
         char str[128];
         do{//T0
             strcpy(str,pedeComandos());
@@ -461,7 +464,7 @@ char* pedeComandos(){
         union sigval info;
         struct sigaction sa;
         info.sival_int = getpid();  //enviar o PID ao backend
-        sigqueue(resposta.pid,SIGUSR2,info);
+        sigqueue(servPid,SIGUSR2,info);
 
 
         printf("Adeus\n");

@@ -6,8 +6,10 @@ User ListaClientes[20];
 int nUsers=0;
 int tempo=0;
 int tempoInicial;
+int tempoRestante; //->heartbeat
 int id=1;
 char listaPromotores[10][50];
+int listaCliAtivos[20][2];//lista com o pid e tempo restante de cada cliente
 int listaItems[30][2];//pode 30 id e 30 duracoes
 pthread_t tid[11];
 
@@ -126,7 +128,7 @@ void verificaDuracao(){
                             }
                             deleteLineFromFile(getenv("FITEMS"),count);
                             preencheListaItems(getenv("FITEMS"));
-                            mostraListaItens();
+                            //mostraListaItens();
 
                         }
                         count++;
@@ -496,6 +498,10 @@ void initLista(){
     for(int i=0;i<20;i++){
         ListaClientes[i] = a;
     }
+    for(int i=0;i<20;i++){
+        listaCliAtivos[i][0]=-1;
+        listaCliAtivos[i][1]=-1;
+    }
 }
 
 void printLista(){
@@ -506,8 +512,17 @@ void printLista(){
     }
 }
 
+void mostraL(){
+    for(int i= 0;i<20;i++){
+        if(listaCliAtivos[i][0] != -1){
+            printf("Cli %d tem %d sec restantes\n",listaCliAtivos[i][0],listaCliAtivos[i][1]);
+
+        }
+    }
+}
+
 void adicionaUserLista(User a){
-    int flag = 0;
+    int flag = 0,flag2 = 0;
     //Verificar se o utlizadores ja esta na lista
     for(int i=0;i<20;i++){
         if(strcmp(ListaClientes[i].nome,a.nome) == 0){
@@ -520,9 +535,40 @@ void adicionaUserLista(User a){
     if(flag == 0){
         ListaClientes[nUsers++] = a;
         printf("O utilizador [%s] esta ligado!\n",a.nome);
+        for(int i=0;i<20;i++) {
+            if(listaCliAtivos[i][0] == -1 && flag2 == 0) {
+                listaCliAtivos[i][0] = a.pid;
+                listaCliAtivos[i][1] = tempoRestante + 1;
+                flag2 = 1;
+            }
+        }
     }
 }
 
+void atualizaListaCliAtivosMenos(){
+    for(int i= 0;i<20;i++){
+        if(listaCliAtivos[i][0] != -1){
+            listaCliAtivos[i][1] -= 1;
+            if(listaCliAtivos[i][1] == 0){
+                printf("O cliente %d nao sa sinal de vida a %d segundos. A encerrar o cliente....\n ",listaCliAtivos[i][0],tempoRestante);
+                listaCliAtivos[i][0] = -1;
+                listaCliAtivos[i][1] = -1;
+                mostraL();
+            }
+        }
+    }
+}
+
+void atualizaListaCliAtivosMais(int pid){
+    for(int i= 0;i<20;i++){
+        if(listaCliAtivos[i][0] != -1){
+            if(listaCliAtivos[i][0] == pid) {
+                listaCliAtivos[i][1] = tempoRestante+1;
+            }
+
+        }
+    }
+}
 
 void paraPromotor(char *nomePromotor){
     //matar thread e processo?
@@ -592,7 +638,6 @@ void reprom(char *filename){
 }
 
 //Funcao que vai informar todos os clientes que o sevidor foi enceraado
-
 
 void kickUser(char nome[]){
     int flag = 0,index=-1;//ativa se existir o utilizador
@@ -721,17 +766,18 @@ Promocao lancaPromotor(char *nomePromotor) {
     return prom;
 }
 
-
-
 void handle_sig(int sig,siginfo_t *info,void *old){
     if(sig==SIGUSR1) {
         printf("Cliente com o PID [%d] ainda esta vivo\n", info->si_value.sival_int);
     }
+    atualizaListaCliAtivosMais(info->si_value.sival_int);
+
 }
 
 void handle_sig_sair(int sig,siginfo_t *info,void *old){
     printf("O cliente com o PID [%d] saiu\n",info->si_value.sival_int);
-    ///TODO:Retirar o cliente da lista e reordenar a lista
+
+    ///TODO:Retirar o cliente das listas e reordenar a lista
 }
 
 void *temporizador(void *dados){
@@ -741,9 +787,11 @@ void *temporizador(void *dados){
         sleep(1);//relogio do servidor(avancar um segundo)-decrementer um segundo ao leilao ativo;ter um int hora sempre a incrementar->fazer com o sleep
         pthread_mutex_lock(pd->ptrinco);
         tempo++;
-        printf("Tempo %ds\n", tempo);
+        //printf("Tempo %ds\n", tempo);
         pthread_mutex_unlock(pd->ptrinco);
         verificaDuracao();
+        atualizaListaCliAtivosMenos();
+        mostraL();
     }while(pd->continua);
     pthread_exit(NULL);
 }
@@ -782,7 +830,7 @@ void init(){
     getId(getenv("FITEMS"));//deixa o id com o valor correto
     preencheLista(getenv("FPROMOTERS"));
     preencheListaItems(getenv("FITEMS"));
-    mostraListaItens();
+    tempoRestante = atoi(getenv("HEARTBEAT"));
 
 }
 
@@ -795,6 +843,7 @@ int main(int argc,char *argv[],char *envp[]) {
     pthread_mutex_t trinco;
     //pthread_t tid[11];
     TDATA data[11]; //1+10 timer + até 10 promotores
+
     //de n em n segundos
     struct sigaction sa;
     sa.sa_sigaction = handle_sig;
@@ -806,6 +855,14 @@ int main(int argc,char *argv[],char *envp[]) {
     sa2.sa_sigaction = handle_sig_sair;
     sa2.sa_flags = SA_SIGINFO;
     sigaction(SIGUSR2, &sa2, NULL);
+
+/*
+    struct sigaction sa3;
+    sa2.sa_sigaction = handle_desbloq;
+    sa2.sa_flags = SA_SIGINFO;
+    sigaction(SIGUSR3, &sa3, NULL);
+*/
+
 
     //sinal(quando o backend termina á força (ctrl + c))
     struct sigaction sa3;
@@ -847,14 +904,13 @@ int main(int argc,char *argv[],char *envp[]) {
         funcSair();
     }
 
-/*
+/*  //ver quantidade de promotores
     for(int i=1;i < 10 + 1 ; i++){
         data[i].continua = 1;
         data[i].ptrinco = &trinco;
         data[i].numProm = i - 1;
         pthread_create(&tid[i],NULL, trata_promos,&data[i]);
         //printf("Id da thread %d -> %d",i,tid[i]);
-
     }
 */
 
@@ -880,7 +936,7 @@ int main(int argc,char *argv[],char *envp[]) {
             sprintf(CLIENT_FIFO_FINAL, FIFO_CLIENTE, a.user.pid);
             if (size > 0) {
                 if(a.comando == 0){//Verificar login
-                    printf("User pid1 %d",a.user.pid);
+                    //printf("User pid1 %d",a.user.pid);
                     ///Tratar info
                     Resposta resposta;
                     loadUsersFile(getenv("FUSERS"));
@@ -949,12 +1005,12 @@ int main(int argc,char *argv[],char *envp[]) {
         data[i].continua=0;
         pthread_join(tid[i],NULL);
     }
-*/
+
     pthread_mutex_destroy(&trinco);
     close(fdRecebe);
     unlink(FIFO_SERVIDOR);
     printf("A avisar os clientes que ira fechar\n");
     printf("Fechou\n");
     return 0;
-
+*/
 }

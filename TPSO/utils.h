@@ -51,4 +51,5 @@ typedef struct resposta
 
 int numArgumentos(char str[]);
 void modifyLineInFile(char *filename, int lineNumber, Item file);
+void modifyLineInFileInt(char *filename, int lineNumber, int i);
 void deleteLineFromFile(char *filename, int lineNumber);

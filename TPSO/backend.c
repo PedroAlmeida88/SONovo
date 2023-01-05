@@ -5,12 +5,12 @@ char CLIENT_FIFO_FINAL[100];
 User ListaClientes[20];
 int nUsers=0;
 int tempo=0;
-int tempoInicial;
+int tempoInicial; //tempo lido do fich
 int tempoRestante; //->heartbeat
 int id=1;
 char listaPromotores[10][50];
 int listaCliAtivos[20][2];//lista com o pid e tempo restante de cada cliente
-int listaItems[30][2];//pode 30 id e 30 duracoes
+int listaItems[30][2];//pode 30 id e 30 duracoes | duracao = tempoInicial + duracao do item
 pthread_t tid[11];
 
 typedef struct {
@@ -30,8 +30,11 @@ void informaClienteFim(){
 }
 
 void funcSair(){
-    printf("\nA encerrar o servidor...\n");
+    printf("\nA encerrar o servidor...");
+    printf("A avisar os clientes que ira fechar\n");
+
     informaClienteFim();
+
     unlink(FIFO_SERVIDOR);
     exit(1);
 }
@@ -101,10 +104,72 @@ void preencheListaItems(char *filename){
     fclose(f);
 }
 
+
+
 void mostraListaItens(){
     for(int i = 0;i<30;i++)
         if(listaItems[i][0] != 0)
-            printf("Linha %d-> %d | %d\n",i+1,listaItems[i][0],listaItems[i][1]);
+            printf("Linha %d-> %d | tempo -> %d | tempo real -> %d\n",
+                   i+1,listaItems[i][0],listaItems[i][1],listaItems[i][1] - tempoInicial);
+}
+
+void removeUserFromList(int pid)
+{
+    int index = -1;
+    // procura o user
+    for (int i = 0; i < nUsers; i++)
+    {
+        if (ListaClientes[i].pid == pid)
+        {
+            index = i;
+            break;
+        }
+    }
+
+    // encontou o user
+    if (index != -1)
+    {
+        // puxa todos um para tras
+        int i;
+        for (i = index; i < nUsers - 1; i++)
+        {
+            ListaClientes[i] = ListaClientes[i + 1];
+        }
+
+        // Decrement the user counter
+        nUsers--;
+        if(nUsers <= 20){
+            ListaClientes[i].pid = -1;
+            strcpy(ListaClientes[i].nome," ");
+        }
+    }
+
+}
+
+void atualizaTempoItens(char *filename){
+    //tempo = tempo item - tempo
+    //printf("Tempo atualizado -> %d",listaItems[0][1] - tempo);
+    //mostraListaItens();
+    Item item;
+    FILE *f;
+    int i,count;
+    f = fopen(filename,"rt");
+    if(f == NULL){
+        fprintf(stderr,"Ficheiro nao encontrado\n");
+        funcSair();
+        return;
+    }else{
+        count = 2;
+        fscanf(f,"%d",&i);
+        while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
+            item.duracao = listaItems[count - 2][1] - tempo;
+            //printf("Tempo atualizado -> %d",listaItems[0][1] - tempo);
+            modifyLineInFile(filename,count,item);
+            count++;
+        }
+    }
+
+
 }
 
 void verificaDuracao(){
@@ -183,7 +248,7 @@ void list(char *filename){
             resposta.item = item;
             resposta.comando = 2;
             int fdEnvio = open(CLIENT_FIFO_FINAL, O_WRONLY);
-            printf("Nome do fifo %s\n",CLIENT_FIFO_FINAL);
+            //printf("Nome do fifo %s\n",CLIENT_FIFO_FINAL);
             int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
             if (size2 == -1) {
                 printf("Nome do fifo %s\n",CLIENT_FIFO_FINAL );
@@ -370,7 +435,7 @@ void adicionaSaldo(char *nome,int valor){
 
 void addItemToFich(char *filename,Item item){
     FILE *f;
-    Resposta resposta;
+    Resposta resposta;int num=0;
     f = fopen(filename,"a");
     if(f == NULL){
         fprintf(stderr,"Ficheiro nao encontrado\n");
@@ -378,10 +443,12 @@ void addItemToFich(char *filename,Item item){
     }else{
         item.id = id++;
         fprintf(f,"\n%d %s %s %d %d %d %s %s",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
+        num++;
     }
     fclose(f);
     resposta.comando = 0;
     resposta.item.id = id-1;
+
     int fdEnvio = open(CLIENT_FIFO_FINAL, O_WRONLY);
     int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
     if (size2 == -1) {
@@ -389,6 +456,16 @@ void addItemToFich(char *filename,Item item){
         funcSair();
     }
     close(fdEnvio);
+
+    for(int i = 0;i<30 ;i++){
+        if(listaItems[i][0] == 0){
+            listaItems[i][0] = item.id;
+            listaItems[i][1] = item.duracao + tempoInicial;
+            break;
+        }
+    }
+    //mostraListaItens();
+
 }
 
 void fazLicitacao(char *filename,char *nome,int id, int valor){
@@ -415,6 +492,7 @@ void fazLicitacao(char *filename,char *nome,int id, int valor){
                     strcpy(resposta.item.categoria,"Item adquirido!");
                     //remover linha do ficheiro
                     deleteLineFromFile(filename,nLinha);
+                    preencheListaItems(filename);
                     //retirar o dinheiro da conta do utilizador
                     updateUserBalance(nome,getUserBalance("TESTE")-item.valCompreJa);
                 }else{
@@ -458,7 +536,6 @@ void getId(char *filename){
         fscanf(f,"%d",&i);
         while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
             //printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
-            //TODO:Tratar informacao
         }
         if(item.id > 30 || item.id <= 0)
             id = 1;
@@ -486,22 +563,11 @@ void leFichItens(char *filename) {
     fclose(f);
 }
 
+
 void gravaTempo(char *filename){
     printf("[Fazer] Atualizar o tempo...\n");
-/*    FILE *f;
-    f = fopen(filename,"wt");
-
-
-    if(f == NULL){
-        fprintf(stderr,"Ficheiro nao encontrado\n");
-        funcSair();
-        return;
-    }else{
-        //atualiza a primeira linha do ficheiro
-        printf("[Fazer] Atualizar o tempo...\n");
-    }
-    fclose(f);
-*/
+    printf("Tempo->%d",tempo);
+    modifyLineInFileInt(filename,1,tempo);
 }
 
 void initLista(){
@@ -563,10 +629,12 @@ void atualizaListaCliAtivosMenos(){
         if(listaCliAtivos[i][0] != -1){
             listaCliAtivos[i][1] -= 1;
             if(listaCliAtivos[i][1] == 0){
-                printf("O cliente %d nao sa sinal de vida a %d segundos. A encerrar o cliente....\n ",listaCliAtivos[i][0],tempoRestante);
+                printf("O cliente [%d] nao sa sinal de vida a %d segundos...\n ",listaCliAtivos[i][0],tempoRestante);
+                removeUserFromList(listaCliAtivos[i][0]);
+                //printLista();
                 listaCliAtivos[i][0] = -1;
                 listaCliAtivos[i][1] = -1;
-                mostraL();
+                //mostraL();
             }
         }
     }
@@ -715,6 +783,7 @@ void pedeComando(char *str,int numArgumento ){
         else {
             informaClienteFim();
             gravaTempo(getenv("FITEMS"));
+            atualizaTempoItens(getenv("FITEMS"));
         }
     } else if(strcmp(token,"promotores") == 0){
         if (numArgumento != 1)
@@ -789,22 +858,21 @@ void handle_sig(int sig,siginfo_t *info,void *old){
 
 void handle_sig_sair(int sig,siginfo_t *info,void *old){
     printf("O cliente com o PID [%d] saiu\n",info->si_value.sival_int);
-
-    ///TODO:Retirar o cliente das listas e reordenar a lista
+    removeUserFromList(info->si_value.sival_int);
+    //printLista();
 }
 
 void *temporizador(void *dados){
     TDATA *pd = dados;
-    //TODO:Guardar o tempo e para ser inicializado depois
     do{
         sleep(1);//relogio do servidor(avancar um segundo)-decrementer um segundo ao leilao ativo;ter um int hora sempre a incrementar->fazer com o sleep
         pthread_mutex_lock(pd->ptrinco);
         tempo++;
-        //printf("Tempo %ds\n", tempo);
         pthread_mutex_unlock(pd->ptrinco);
+        //printf("Tempo %ds\n", tempo);
         verificaDuracao();
         atualizaListaCliAtivosMenos();
-        mostraL();
+        //mostraL();
     }while(pd->continua);
     pthread_exit(NULL);
 }
@@ -813,7 +881,6 @@ void *trata_promos(void *dados){
     TDATA *pd = dados;
     //TODO:Guardar o tempo e para ser inicializado depois
     do{
-        //pthread_mutex_lock(pd->ptrinco);
         Promocao prom;
         int count = 0;
         do {
@@ -844,7 +911,6 @@ void init(){
     preencheLista(getenv("FPROMOTERS"));
     preencheListaItems(getenv("FITEMS"));
     tempoRestante = atoi(getenv("HEARTBEAT"));
-
 }
 
 
@@ -890,7 +956,7 @@ int main(int argc,char *argv[],char *envp[]) {
             printf("Servidor em execução ou fifo ja existe");
         }
         printf("Erro abrir fifo");
-        funcSair();
+        exit(1);
     }
     printf("Bem vindo Administrador\n");
     int fdRecebe = open(FIFO_SERVIDOR, O_RDWR);
@@ -967,7 +1033,7 @@ int main(int argc,char *argv[],char *envp[]) {
                     } else {
                         resposta.num = 1;
                         adicionaUserLista(a.user);
-                        printLista();
+                        //printLista();
                     }
                     ///Enviar resposta ao cliente
                     resposta.pid = getpid();
@@ -1003,8 +1069,6 @@ int main(int argc,char *argv[],char *envp[]) {
                     adicionaSaldo(a.user.nome,a.item.valAtual);
                 }
 
-
-
             } else {
                 fprintf(stderr,"Erro na leitura");
                 funcSair();
@@ -1021,11 +1085,11 @@ int main(int argc,char *argv[],char *envp[]) {
         pthread_join(tid[i],NULL);
     }
 
+*/
     pthread_mutex_destroy(&trinco);
     close(fdRecebe);
-    unlink(FIFO_SERVIDOR);
-    printf("A avisar os clientes que ira fechar\n");
+    funcSair();
     printf("Fechou\n");
     return 0;
-*/
+
 }

@@ -53,6 +53,37 @@ void modifyLineInFile(char *filename, int lineNumber, Item item)
     // Close the file
     fclose(file);
 }
+void modifyLineInFileInt(char *filename, int lineNumber, int i)
+{
+    // Open the file for reading and writing
+    FILE *file = fopen(filename, "r+");
+    if (file == NULL)
+    {
+        printf("Error opening file!\n");
+        return;
+    }
+
+    // Go to the beginning of the file
+    rewind(file);
+
+    // Read each line of the file and write it to the same file,
+    // replacing the specified line with the new line
+    char line[256];
+    int currentLine = 1;
+    while (fgets(line, sizeof(line), file) != NULL)
+    {
+        if (currentLine == lineNumber)
+        {
+            // Write the new line over the old line
+            fseek(file, -strlen(line), SEEK_CUR);
+            fprintf(file,"%d",i);
+        }
+        currentLine++;
+    }
+
+    // Close the file
+    fclose(file);
+}
 void deleteLineFromFile(char *filename, int lineNumber)
 {
     // Open the file for reading

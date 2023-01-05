@@ -36,6 +36,14 @@ void funcSair(){
     exit(1);
 }
 
+int existeUserLista(char *username){
+    for(int i =0;i<20;i++){
+        if(strcmp(username,ListaClientes[i].nome) == 0)
+            return 1;//user ja esta logado
+    }
+    return 0;
+}
+
 void preencheLista(char * filename){
     FILE *f;Promocao prom;
     char nomePromotor[50];
@@ -279,7 +287,7 @@ void listVal(char *filename,int val){
     fclose(f);
 }
 
-void listTemp(char *filename,int val){
+void listTemp(char *filename,int temp){
     Item item;
     int i;
     FILE *f;
@@ -289,11 +297,12 @@ void listTemp(char *filename,int val){
         fprintf(stderr,"Ficheiro nao encontrado\n");
         return;
     }else{
+        fscanf(f,"%d",&i);
         while (fscanf(f,"%d %s %s %d %d %d %s %s",&item.id,item.nome,item.categoria,&item.valAtual,&item.valCompreJa,&item.duracao,item.usernameVendedor,item.usernameLicitador) != EOF){
-            fscanf(f,"%d",&i);
-            if(item.duracao <= val) {
-                //printf("Valor %d\n",val);
-                //printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
+
+            if(item.duracao <= temp) {
+                printf("Valor %d\n",temp);
+                printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
 
                 resposta.pid = getpid();
                 resposta.item = item;
@@ -305,6 +314,7 @@ void listTemp(char *filename,int val){
                     funcSair();
                 }
                 close(fdEnvio);
+
             }
         }
     }
@@ -450,7 +460,10 @@ void getId(char *filename){
             //printf("%d %s %s %d %d %d %s %s\n",item.id,item.nome,item.categoria,item.valAtual,item.valCompreJa,item.duracao,item.usernameVendedor,item.usernameLicitador);
             //TODO:Tratar informacao
         }
-        id = ++item.id;
+        if(item.id > 30 || item.id <= 0)
+            id = 1;
+        else
+            id = ++item.id;
     }
     fclose(f);
 }
@@ -943,12 +956,14 @@ int main(int argc,char *argv[],char *envp[]) {
                     resposta.comando = 1;
                     int aux = isUserValid(a.user.nome, a.user.password);
                     if (aux == -1) {
-                        resposta.num = 0;
+                        resposta.num = 2;
                         fprintf(stderr, "Erro(funcao isUserValid)!");
                         funcSair();
                     } else if (aux == 0) {
-                        resposta.num = 0;
+                        resposta.num = 3;
                         printf("Utilizador nao existe ou password errada!\n");
+                    }else if(existeUserLista(a.user.nome)){
+                        resposta.num = 4;
                     } else {
                         resposta.num = 1;
                         adicionaUserLista(a.user);

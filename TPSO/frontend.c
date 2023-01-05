@@ -236,7 +236,7 @@ char* pedeComandos(){
             else{
                 token = strtok(NULL, " ");
                 duracao = atoi(token);
-                printf("Hora em segundos: %d\n", duracao);
+                //printf("Hora em segundos: %d\n", duracao);
                 listTemp(duracao);
             }
 
@@ -328,8 +328,14 @@ char* pedeComandos(){
                         pthread_mutex_lock(pd->ptrinco);
                         servPid = resposta.pid;
                         pthread_mutex_unlock(pd->ptrinco);
-                    }else{
+                    }else if(resposta.num == 2){
+                        printf("Erro com o ficheiro!\n");
+                        exit(1);
+                    }else if(resposta.num == 3){
                         printf("Utilizador desconecido ou password errada!\n");
+                        exit(1);
+                    }else if(resposta.num == 4){
+                        printf("Utilizador ja esta ligado!\n");
                         exit(1);
                     }
                 }else if(resposta.comando == 0){

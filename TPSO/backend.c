@@ -251,7 +251,7 @@ void list(char *filename){
             //printf("Nome do fifo %s\n",CLIENT_FIFO_FINAL);
             int size2 = write(fdEnvio, &resposta, sizeof(Resposta));
             if (size2 == -1) {
-                printf("Nome do fifo %s\n",CLIENT_FIFO_FINAL );
+                //printf("Nome do fifo %s\n",CLIENT_FIFO_FINAL );
                 fprintf(stderr, "Erro a escrever");
                 funcSair();
             }
@@ -565,8 +565,8 @@ void leFichItens(char *filename) {
 
 
 void gravaTempo(char *filename){
-    printf("[Fazer] Atualizar o tempo...\n");
-    printf("Tempo->%d",tempo);
+    //printf("[Fazer] Atualizar o tempo...\n");
+    //printf("Tempo->%d",tempo);
     modifyLineInFileInt(filename,1,tempo);
 }
 
@@ -866,9 +866,15 @@ void *temporizador(void *dados){
     TDATA *pd = dados;
     do{
         sleep(1);//relogio do servidor(avancar um segundo)-decrementer um segundo ao leilao ativo;ter um int hora sempre a incrementar->fazer com o sleep
-        pthread_mutex_lock(pd->ptrinco);
+        if(pthread_mutex_lock(pd->ptrinco) != 0){
+            printf("Erro com o lock\n");
+            funcSair();
+        }
         tempo++;
-        pthread_mutex_unlock(pd->ptrinco);
+        if(pthread_mutex_unlock(pd->ptrinco) != 0){
+            printf("Erro com o lock\n");
+            funcSair();
+        }
         //printf("Tempo %ds\n", tempo);
         verificaDuracao();
         atualizaListaCliAtivosMenos();
@@ -885,10 +891,17 @@ void *trata_promos(void *dados){
         int count = 0;
         do {
             if (count == pd->numProm && strcmp(listaPromotores[count],"-") != 0 ) {
-                pthread_mutex_lock(pd->ptrinco);
-                printf("\n%s\n",listaPromotores[count]);
                 prom = lancaPromotor(listaPromotores[count]);
-                pthread_mutex_unlock(pd->ptrinco);
+                printf("\n%s\n",listaPromotores[count]);
+                if(pthread_mutex_lock(pd->ptrinco) != 0){
+                    printf("Erro com o lock\n");
+                    funcSair();
+                }
+                //todo:copiar para var global aqui dentro do lock
+                if(pthread_mutex_unlock(pd->ptrinco) != 0){
+                    printf("Erro com o lock\n");
+                    funcSair();
+                }
                 printf("Promotor: %s\n", listaPromotores[count]);
                 printf("Categoria: %s\n", prom.categoria);
                 printf("Desconto: %d\n", prom.desconto);
@@ -965,11 +978,17 @@ int main(int argc,char *argv[],char *envp[]) {
         funcSair();
     }
 
-    pthread_mutex_init(&trinco,NULL);
+    if(pthread_mutex_init(&trinco,NULL) != 0){
+        printf("Erro no pthread_mutex_init\n");
+        funcSair();
+    }
     //T1->temporizador
     data[0].continua = 1;
     data[0].ptrinco = &trinco;
-    pthread_create(&tid[0],NULL, temporizador,&data[0]);
+    if(pthread_create(&tid[0],NULL, temporizador,&data[0]) != 0){
+        printf("Erro ao criar a thread\n");
+        funcSair();
+    }
     //T2->promotores
     /*
     data[1].continua = 1;
@@ -1012,6 +1031,10 @@ int main(int argc,char *argv[],char *envp[]) {
         }else if (res >0 && FD_ISSET(fdRecebe,&fds)) {
             ///Le a informacao do cliente
             int size = read(fdRecebe, &a, sizeof(Comando));
+            if (size == -1) {
+                fprintf(stderr, "Erro a escrever");
+                funcSair();
+            }
             sprintf(CLIENT_FIFO_FINAL, FIFO_CLIENTE, a.user.pid);
             if (size > 0) {
                 if(a.comando == 0){//Verificar login
@@ -1077,8 +1100,14 @@ int main(int argc,char *argv[],char *envp[]) {
     } while (strcmp(str,"close")!=0);
 
     data[0].continua=0;
-    pthread_cancel(tid[0]);
-    pthread_join(tid[0],NULL);
+    if(pthread_cancel(tid[0]) != 0){
+        printf("Erro com o pthread_cancel\n");
+        funcSair();
+    }
+    if(pthread_join(tid[0],NULL) != 0){
+        printf("Erro com o pthread_join\n");
+        funcSair();
+    }
 /*
     for(int i=1;i<10+1;i++){
         data[i].continua=0;
@@ -1086,7 +1115,10 @@ int main(int argc,char *argv[],char *envp[]) {
     }
 
 */
-    pthread_mutex_destroy(&trinco);
+    if(pthread_mutex_destroy(&trinco) != 0){
+        printf("Erro com o mutex_destry\n");
+        funcSair();
+    }
     close(fdRecebe);
     funcSair();
     printf("Fechou\n");

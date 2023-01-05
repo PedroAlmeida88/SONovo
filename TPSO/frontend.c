@@ -17,131 +17,188 @@ typedef struct {
     pthread_mutex_t *ptrinco;
 }TDATA;
 
+void funcSair(){
+    printf("\nA encerrar o cliente...\n");
+    unlink(CLIENT_FIFO_FINAL);
+    exit(1);
+}
+
 void colocaLeilao(char *nome,Item a){
-    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
-    if(fdEnvia == -1){
-        printf("Erro ao abrir o fifo");
-    }
     Comando comando;
     comando.item=a;
     comando.user.pid = pid;
     comando.comando=1;//enviar um item
-
+    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
+    if(fdEnvia == -1){
+        printf("Erro ao abrir o fifo");
+        funcSair();
+    }
     int size = write(fdEnvia, &comando, sizeof(Comando));
+    if (size == -1) {
+        fprintf(stderr, "Erro a escrever");
+        funcSair();
+    }
     close(fdEnvia);
-
 }
 
 void list(){
+    Comando comando;
+    comando.user.pid = pid;
+    comando.comando=2;//lista todos os itens
+
     int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
     if(fdEnvia == -1){
         printf("Erro ao abrir o fifo");
     }
-    Comando comando;
-    comando.user.pid = pid;
-    comando.comando=2;//lista todos os itens
+
     int size = write(fdEnvia, &comando, sizeof(Comando));
+    if (size == -1) {
+        fprintf(stderr, "Erro a escrever");
+        funcSair();
+    }
     close(fdEnvia);
 
 }
 
 void listCat(char *categoria){
-    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
-    if(fdEnvia == -1){
-        printf("Erro ao abrir o fifo");
-    }
     Comando comando;
     comando.user.pid = pid;
     strcpy(comando.item.categoria,categoria);
     comando.comando=3;//lista todos os itens de uma categoria
+
+    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
+    if(fdEnvia == -1){
+        printf("Erro ao abrir o fifo");
+    }
+
     int size = write(fdEnvia, &comando, sizeof(Comando));
+    if (size == -1) {
+        fprintf(stderr, "Erro a escrever");
+        funcSair();
+    }
     close(fdEnvia);
 
 }
 
 void listVen(char *vendedor){
-    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
-    if(fdEnvia == -1){
-        printf("Erro ao abrir o fifo");
-    }
     Comando comando;
     comando.user.pid = pid;
     strcpy(comando.item.usernameVendedor,vendedor);
     comando.comando=4;//lista todos os itens de uma categoria
+
+    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
+    if(fdEnvia == -1){
+        printf("Erro ao abrir o fifo");
+    }
+
     int size = write(fdEnvia, &comando, sizeof(Comando));
+    if (size == -1) {
+        fprintf(stderr, "Erro a escrever");
+        funcSair();
+    }
     close(fdEnvia);
 
 }
 
 void listVal(int val){
-    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
-    if(fdEnvia == -1){
-        printf("Erro ao abrir o fifo");
-    }
     Comando comando;
     comando.user.pid = pid;
     comando.item.valAtual=val;
     comando.comando=5;//lista todos os itens de uma categoria
+
+    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
+    if(fdEnvia == -1){
+        printf("Erro ao abrir o fifo");
+        funcSair();
+    }
+
     int size = write(fdEnvia, &comando, sizeof(Comando));
+    if (size == -1) {
+        fprintf(stderr, "Erro a escrever");
+        funcSair();
+    }
     close(fdEnvia);
 
 }
 void listTemp(int tempo){
-    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
-    if(fdEnvia == -1){
-        printf("Erro ao abrir o fifo");
-    }
     Comando comando;
     comando.user.pid = pid;
     comando.item.duracao=tempo;
     comando.comando=6;//lista todos os itens de uma categoria
+
+    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
+    if(fdEnvia == -1){
+        printf("Erro ao abrir o fifo");
+    }
+
     int size = write(fdEnvia, &comando, sizeof(Comando));
+    if (size == -1) {
+        fprintf(stderr, "Erro a escrever");
+        funcSair();
+    }
     close(fdEnvia);
 
 }
 
 void pedeHora(){
+    Comando comando;
+    comando.user.pid = pid;
+    comando.comando=7;//lista todos os itens de uma categoria
+
     int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
     if(fdEnvia == -1){
         printf("Erro ao abrir o fifo");
     }
-    Comando comando;
-    comando.user.pid = pid;
-    comando.comando=7;//lista todos os itens de uma categoria
+
     int size = write(fdEnvia, &comando, sizeof(Comando));
+    if (size == -1) {
+        fprintf(stderr, "Erro a escrever");
+        funcSair();
+    }
     close(fdEnvia);
 
 }
 
 void licita(int id,int valor){
     //valor tem de ser mais alto do que a licitacao atual
-    //tem ter o dinheiro
-    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
-    if(fdEnvia == -1){
-        printf("Erro ao abrir o fifo");
-    }
+    //tem ter o dinheiro~
     Comando comando;
     comando.user.pid = pid;
     comando.item.id = id;
     comando.item.valAtual = valor;
     comando.comando=8;//enviar um item
     strcpy(comando.user.nome,nome);
+
+    int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
+    if(fdEnvia == -1){
+        printf("Erro ao abrir o fifo");
+    }
+
     int size = write(fdEnvia, &comando, sizeof(Comando));
+    if (size == -1) {
+        fprintf(stderr, "Erro a escrever");
+        funcSair();
+    }
     close(fdEnvia);
 
 }
 
 void pedeSaldo(char *nome){
-
     Comando comando;
     comando.user.pid = pid;
     strcpy(comando.user.nome,nome);
     comando.comando=9;//lista todos os itens de uma categoria
+
     int fdEnvia = open(FIFO_SERVIDOR,O_WRONLY);
     if(fdEnvia == -1){
         printf("Erro ao abrir o fifo");
     }
+
     int size = write(fdEnvia, &comando, sizeof(Comando));
+    if (size == -1) {
+        fprintf(stderr, "Erro a escrever");
+        funcSair();
+    }
     close(fdEnvia);
 
 }
@@ -157,6 +214,10 @@ void addSaldo(int saldo){
     strcpy(comando.user.nome,nome);
     comando.comando=10;//lista todos os itens de uma categoria
     int size = write(fdEnvia, &comando, sizeof(Comando));
+    if (size == -1) {
+        fprintf(stderr, "Erro a escrever");
+        funcSair();
+    }
     close(fdEnvia);
 }
 
@@ -294,12 +355,6 @@ void handle_alarm(){
     alarm(atoi(getenv("HEARTBEAT")));
 }
 
-void funcSair(){
-    printf("\nA encerrar o cliente...\n");
-    unlink(CLIENT_FIFO_FINAL);
-    exit(1);
-}
-
 void handle_sig_servidorEncerrou(){
     printf("\nO servidor foi encerrado...\n");
     printf("A terminar...\n");
@@ -319,16 +374,20 @@ void *trata_pipe(void *dados){
     Resposta resposta;
     do{
         ///Le a informacao do cliente
-        //pthread_mutex_lock(pd->ptrinco);
         int size2 = read(pd->fdResposta, &resposta, sizeof(Resposta));
-        //pthread_mutex_unlock(pd->ptrinco);
         if(size2 > 0){
             if(resposta.comando == 1){
                 if(resposta.num == 1){
                     printf("Bem vindo %s!\n",nome);
-                    pthread_mutex_lock(pd->ptrinco);
+                    if(pthread_mutex_lock(pd->ptrinco) != 0){
+                        printf("Erro com o lock\n");
+                        funcSair();
+                    }
                     servPid = resposta.pid;
-                    pthread_mutex_unlock(pd->ptrinco);
+                    if(pthread_mutex_unlock(pd->ptrinco) != 0){
+                        printf("Erro com o lock\n");
+                        funcSair();
+                    }
                 }else if(resposta.num == 2){
                     printf("Erro com o ficheiro!\n");
                     funcSair();
@@ -412,21 +471,31 @@ int main(int argc, char **argv, char **envp){
         funcSair();
     }
     int size = write(fdEnvia, &a, sizeof(Comando));
+    if (size == -1) {
+        fprintf(stderr, "Erro a escrever");
+        funcSair();
+    }
 
     close(fdEnvia);
     ///Receber a resposta do servidor
     int fdResposta = open(CLIENT_FIFO_FINAL, O_RDWR);
     if(fdResposta == -1){
         printf("Erro ao abrir o fifo");
+        funcSair();
     }
 
-    pthread_mutex_init(&trinco,NULL);
+    if(pthread_mutex_init(&trinco,NULL) != 0){
+        printf("Erro no pthread_mutex_init\n");
+        funcSair();
+    }
     //T1
     data.continua = 1;
     data.ptrinco = &trinco;
     data.fdResposta = fdResposta;
-    pthread_create(&tid,NULL, trata_pipe,&data);
-    Resposta resposta;
+    if(pthread_create(&tid,NULL, trata_pipe,&data) != 0){
+        printf("Erro ao criar a thread\n");
+        funcSair();
+    }
 
 
     //caso o servidor seja encerrado
@@ -460,10 +529,20 @@ int main(int argc, char **argv, char **envp){
     } while (strcmp(str,"exit")!=0);
 
     data.continua=0;
-    pthread_cancel(tid);
-    pthread_join(tid,NULL);
+    if(pthread_cancel(tid) != 0){
+        printf("Erro com o pthread_cancel\n");
+        funcSair();
+    }
+    if(pthread_join(tid,NULL) != 0 ){
+        printf("Erro com o pthread_join\n");
+        funcSair();
+    }
 
-    pthread_mutex_destroy(&trinco);
+    if(pthread_mutex_destroy(&trinco) !=  0){
+        printf("Erro com o mutex_destry\n");
+        funcSair();
+    }
+
     close(fdResposta);
     unlink(CLIENT_FIFO_FINAL);
     printf("A avisar o servidor que irei sair\n");

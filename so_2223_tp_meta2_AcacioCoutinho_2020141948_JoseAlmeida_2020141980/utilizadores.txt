@@ -1,0 +1,8 @@
+a b 10056
+b b 10022
+c b 35243
+d b 4233
+e b 3252
+Tonico passtonico 42069
+Tonica passtonica 42069
+TESTE teste 9989

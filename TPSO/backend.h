@@ -8,7 +8,7 @@
 typedef struct promocao{
     char categoria[50];
     int desconto;
-    int duracao;       
+    int duracao;
 } Promocao;
 
 Promocao lancaPromotor(char *nome);

@@ -347,10 +347,9 @@ char* pedeComandos(){
 }
 
 void handle_alarm(){
-    //printf("\nEnviei um sinal ao servidor\n");
     union sigval info;
     struct sigaction sa;
-    info.sival_int = getpid();  //enviar o PID ao backend
+    info.sival_int = getpid();                          //enviar o PID ao backend
     sigqueue(servPid,SIGUSR1,info);
     alarm(atoi(getenv("HEARTBEAT")));
 }
@@ -378,7 +377,7 @@ void *trata_pipe(void *dados){
         if(size2 > 0){
             if(resposta.comando == 1){
                 if(resposta.num == 1){
-                    printf("Bem vindo %s!\n",nome);
+                    printf("Bem vindo ao SOBay, %s!\n",nome);
                     if(pthread_mutex_lock(pd->ptrinco) != 0){
                         printf("Erro com o lock\n");
                         funcSair();
@@ -417,6 +416,8 @@ void *trata_pipe(void *dados){
                 printf("\nSaldo atual: %d\n",resposta.num);
             }else if(resposta.comando == 10){
                 printf("\nSaldo adicionado!\nSaldo Atual: %d\n",resposta.num);
+            }else if(resposta.comando == 11){
+                printf("\nItem %s [id=%d]adquirido!\n",resposta.item.nome,resposta.item.id);
             }
 
         }else{

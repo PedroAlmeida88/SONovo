@@ -1,0 +1,7 @@
+94
+1 bola desporto 60 90 1000
+2 mesa mobilia 200 2000 3000
+3 rt pt 65 78 3196 a -
+5 rt pt 65 78 3196 a -
+6 rt pt 65 78 3186 a -
+7 rt pt 65 78 3185 a -
